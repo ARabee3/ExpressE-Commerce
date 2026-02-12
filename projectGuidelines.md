@@ -6,8 +6,8 @@ This document outlines the workflow and coding standards for our Node.js/Express
 
 - **Feature Branches:** Never push directly to `main`. Create a branch for every task
   - Format: `feat/feature-name` or `fix/issue-name`.
-- **Pull Requests:** Before merging to `main`, a PR must be opened and reviewed by at least one other team member.
-- **Daily Sync:** Always `git pull origin main` before starting your work to avoid merge conflicts.
+- **Pull Requests:** Before merging to `master`, a PR must be opened and reviewed by at least one other team member.
+- **Daily Sync:** Always `git pull origin master` before starting your work to avoid merge conflicts.
 
 ## 2. Global Error Handling (Mandatory)
 
