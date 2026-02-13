@@ -1,5 +1,5 @@
 import { orderModel } from "../../Database/Models/order.model.js";
-import { catchAsync } from "../../Utils/catchAsync.js";
+import { catchAsync } from "../../Utils/Error/catchAsync.js";
 
 // const getUserOrders = catchAsync(async (req, res, next) => {
 //   const orders = orderModel

@@ -6,19 +6,21 @@ import { orderModel } from "./Database/Models/order.model.js";
 import orderRoutes from "./Modules/Order/order.routes.js";
 import { categoryModel } from "./Database/Models/category.model.js";
 import categoryRoutes from "./Modules/Category/category.routes.js";
+import userRoutes from "./Modules/User/user.routes.js";
 
 dbConnection();
 const app = express();
 
 app.use(express.json());
+app.use(userRoutes);
 
 app.use(globalErrorHandler);
 
 orderModel;
 categoryModel;
 
-app.use(categoryRoutes)
-app.use(orderRoutes)
+app.use(categoryRoutes);
+app.use(orderRoutes);
 app.listen(3000, () => {
   console.log("Server is running successfully at port 3000");
 });
