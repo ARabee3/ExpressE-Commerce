@@ -1,11 +1,11 @@
-import { AppError } from "../Utils/AppError.js";
+import { AppError } from "../Utils/Error/AppError.js";
 import { orderModel } from "../Database/Models/order.model.js";
 
 export const isAuthor = (model, entity) => {
   return async (req, res, next) => {
     let entityId = req.params.id; // if called from crud ops of oreder by id of order => in params
     // if (entity === "cart") {
-    //   entityId = req.body.cartId; 
+    //   entityId = req.body.cartId;
     //   // as if cart model => it be called from addOrder method to check cart belong to user or not
     //   //and cart id will be req.body not params
     // }
