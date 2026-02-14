@@ -13,6 +13,10 @@ import userRoutes from "./Modules/User/user.routes.js";
 import adminRouter from "./Modules/Admin/admin.routes.js";
 import "./Utils/Events/sendEmailEvent.js";
 
+import { cartModel } from "./Database/Models/cart.model.js";
+import { couponModel } from "./Database/Models/coupon.model.js";
+// import cartRoutes from "./Modules/Cart/cart.routes.js";
+
 dbConnection();
 redisConnection();
 const app = express();
@@ -22,6 +26,8 @@ app.use(express.json());
 orderModel;
 categoryModel;
 productModel;
+cartModel;
+couponModel;
 
 app.use(userRoutes);
 app.use(categoryRoutes);
@@ -29,6 +35,7 @@ app.use(productsRoutes);
 app.use(orderRoutes);
 app.use(adminRouter);
 
+// app.use(cartRoutes)
 app.use(globalErrorHandler);
 
 app.listen(3000, () => {
