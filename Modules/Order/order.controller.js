@@ -6,7 +6,7 @@ import { cartModel } from "../../Database/Models/cart.model.js";
 import { couponModel } from "../../Database/Models/coupon.model.js";
 
 const getUserOrders = catchAsync(async (req, res, next) => {
-  const orders = orderModel
+  const orders = await orderModel
     .find({ userId: req.user._id })
     .populate("orderItems.productId", "title price images")
     .sort({ createdAt: -1 });
@@ -19,7 +19,7 @@ const getUserOrders = catchAsync(async (req, res, next) => {
 
 const getOrderById = catchAsync(async (req, res, next) => {
   let orderId = req.params.id;
-  const order = orderModel
+  const order = await orderModel
     .findOne({ _id: orderId })
     .populate("orderItems.productId", "title price images");
 
@@ -41,7 +41,7 @@ const addOrder = catchAsync(async (req, res, next) => {
   let couponId = req.body.couponId;
 
   // check if cart has items or not
-  let cart = cartModel.findById(cartId);
+  let cart = await cartModel.findById(cartId);
   if (cart.items.length === 0) {
     return next(new AppError("Cart is empty ", 404));
   }
@@ -81,7 +81,7 @@ const addOrder = catchAsync(async (req, res, next) => {
     });
   }
   if (couponId) {
-    let coupon = couponModel.findById(couponId);
+    let coupon = await couponModel.findById(couponId);
     if (!coupon) {
       return next(new AppError(`coupon with id ${couponId} is not found`, 404));
     }
@@ -105,7 +105,7 @@ const addOrder = catchAsync(async (req, res, next) => {
 
     finalPrice = totalOrderPrice - discountAmount;
     // update used count of this coupon and inc it by one
-    couponModel.updateOne({ _id: couponId }, { $inc: { usedCount: 1 } });
+    await couponModel.updateOne({ _id: couponId }, { $inc: { usedCount: 1 } });
   }
 
   // add order
@@ -123,7 +123,7 @@ const addOrder = catchAsync(async (req, res, next) => {
   // update stock
   for (const item of orderItems) {
     await productModel.findByIdAndUpdate(item.productId, {
-      $inc: { stockQuantity: -item.quantity },
+      $inc: { stock: -item.quantity },
     });
   }
 
@@ -144,7 +144,7 @@ const addOrder = catchAsync(async (req, res, next) => {
 });
 
 const cancelOrder = catchAsync(async (req, res, next) => {
-  const orderId = req.params;
+  const orderId = req.params.id;
   const userId = req.user._id;
 
   const order = await orderModel.findById(orderId);
@@ -180,6 +180,11 @@ const cancelOrder = catchAsync(async (req, res, next) => {
       $inc: { stock: item.quantity },
     });
   }
+
+  res.status(200).json({
+    message: "order cancelled successfully",
+    data: updatedOrder,
+  });
 });
 
 const updatePaidStatus = catchAsync(async (req, res, next) => {
@@ -197,7 +202,7 @@ const updatePaidStatus = catchAsync(async (req, res, next) => {
 
   // update payment info
 
-  const updatedOrder = await orderModel.findByIdAndUpdate(
+  const updatedOrder = await orderModel.findOneAndUpdate(
     { _id: orderId, status: "Pending" },
     {
       $set: {
