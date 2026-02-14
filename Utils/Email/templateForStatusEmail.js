@@ -244,7 +244,7 @@ export const generateEmailHTML = (
           </div>
 
           <div style="text-align: center;">
-            <a href="${process.env.FRONTEND_URL}/orders/${orderId}" class="button">
+            <a href="${process.env.BASE_URL}/orders/${orderId}" class="button">
               View Order Details
             </a>
           </div>
