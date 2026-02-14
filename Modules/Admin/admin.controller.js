@@ -143,7 +143,7 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
     }
 
     if (status === 'Cancelled') {
-      updateData.cancelledAt = new Date();
+      order.cancelledAt = new Date();
     }
 
     const updatedOrder = await orderModel.findByIdAndUpdate(orderId, { status }, { new: true })
