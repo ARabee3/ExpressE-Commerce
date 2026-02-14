@@ -9,20 +9,20 @@ import{ getUserById,
   getDashboardStats}from "./admin.controller.js";
 import { Router } from "express";
 import { isAdmin } from "../../Middlewares/isAdmin.js";
+import verifyToken from "../../Middlewares/verifyToken.js";
 
 const adminRouter = Router();
 
-adminRouter.use(isAdmin);
+adminRouter.use(verifyToken);
 
-adminRouter.get("/users/:id", getUserById);
-adminRouter.delete("/users/:id", deleteUser);
-adminRouter.put("/users/:id/role", updateUserRole);
+adminRouter.get("/users/:id", isAdmin, getUserById);
+adminRouter.delete("/users/:id", isAdmin, deleteUser);
+adminRouter.put("/users/:id/role",isAdmin, updateUserRole);
 
-adminRouter.get("/orders", getAllOrders);
-adminRouter.get("/orders/:id", getOrderById);
-adminRouter.put("/orders/:id/status", updateOrderStatus);
-adminRouter.delete("/orders/:id", deleteOrder);
+adminRouter.get("/orders",isAdmin, getAllOrders);
+adminRouter.get("/orders/:id",isAdmin, getOrderById);
+adminRouter.put("/orders/:id/status", isAdmin, updateOrderStatus);
+adminRouter.delete("/orders/:id", isAdmin, deleteOrder);
 
-adminRouter.get("/dashboard-stats", getDashboardStats);
-
+adminRouter.get("/dashboard-stats", isAdmin, getDashboardStats);
 export default adminRouter;
