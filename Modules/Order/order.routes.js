@@ -14,7 +14,7 @@ import { isAuthor } from "../../Middlewares/isAuthor.js";
 const orderRoutes = express.Router();
 
 // orderRoutes.get("/orders", getUserOrders);
-// orderRoutes.get("/orders/:id", getOrderById);
+// orderRoutes.get("/orders/:id",isAuthor(orderModel, "order"), getOrderById);
 // orderRoutes.post(
 //   "/orders",
 //   validateData(orderValidation),
