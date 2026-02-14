@@ -1,5 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 import { hashPassword } from "../../Utils/hashPassword.js";
+import jwt from "jsonwebtoken";
 
 const userSchema = new Schema(
   {
@@ -48,4 +49,12 @@ const userSchema = new Schema(
 );
 
 userSchema.pre("save", hashPassword);
+
+userSchema.methods.generateToken = function () {
+  return jwt.sign(
+    { _id: this._id, email: this.email, role: this.role },
+    process.env.SECRETKEY,
+    { expiresIn: "1h" }, // You can also use an environment variable for expiration
+  );
+};
 export const userModel = mongoose.model("User", userSchema);
