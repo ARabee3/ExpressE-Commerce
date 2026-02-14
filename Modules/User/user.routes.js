@@ -1,12 +1,12 @@
 import express from "express";
 import { validate } from "../../Middlewares/validate.js";
 import { userValidation } from "../../Validations/userValidation.js";
-import { register } from "./user.controller.js";
+import { register, login } from "./user.controller.js";
 
 const userRoutes = express.Router();
 
 userRoutes.post("/register", validate(userValidation), register);
-//userRoutes.post("/login", login);
+userRoutes.post("/login", login);
 //userRoutes.post("/logout", logout);
 // userRoutes.post("/refresh", refresh);
 // userRoutes.post("/verify-email", verifyEmail);
