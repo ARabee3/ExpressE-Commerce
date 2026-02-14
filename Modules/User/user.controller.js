@@ -3,10 +3,12 @@ import { AppError } from "../../Utils/Error/AppError.js";
 import { catchAsync } from "../../Utils/Error/catchAsync.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { sendMailEvent } from "../../Utils/Events/sendEmailEvent.js";
 
 const register = catchAsync(async (req, res, next) => {
   const newUser = await userModel.create(req.body);
-  // Verification Mail Event
+  sendMailEvent.emit("register", newUser);
+
   newUser.password = undefined;
   res.status(201).json({
     success: true,

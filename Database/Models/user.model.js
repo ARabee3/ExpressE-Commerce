@@ -1,7 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 import { hashPassword } from "../../Utils/hashPassword.js";
 
-
 const userSchema = new Schema(
   {
     name: {
@@ -45,9 +44,8 @@ const userSchema = new Schema(
       },
     ],
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
-
 
 userSchema.pre("save", hashPassword);
 export const userModel = mongoose.model("User", userSchema);
