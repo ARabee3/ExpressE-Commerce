@@ -10,6 +10,7 @@ import orderRoutes from "./Modules/Order/order.routes.js";
 import { categoryModel } from "./Database/Models/category.model.js";
 import categoryRoutes from "./Modules/Category/category.routes.js";
 import userRoutes from "./Modules/User/user.routes.js";
+import adminRouter from "./Modules/Admin/admin.routes.js";
 import "./Utils/Events/sendEmailEvent.js";
 
 dbConnection();
@@ -26,6 +27,7 @@ app.use(userRoutes);
 app.use(categoryRoutes);
 app.use(productsRoutes);
 app.use(orderRoutes);
+app.use(adminRouter);
 
 app.use(globalErrorHandler);
 
