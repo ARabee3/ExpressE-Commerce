@@ -28,6 +28,8 @@ const login = catchAsync(async (req, res, next) => {
     .select("+password");
 
   if (!foundUser) {
+    //fake compare to keep response time identical
+    await bcrypt.compare(req.body.password, req.body.email);
     return next(new AppError("Invalid Email or Password", 401));
   }
 
@@ -63,7 +65,7 @@ const verifyEmail = catchAsync(async (req, res, next) => {
   const { email } = req.user;
   if (!otp) return next(new AppError("OTP is required", 400));
 
-  const storedOtp = await redisClient.get(email);
+  const storedOtp = await redisClient.get(`verify:${email}`);
 
   if (String(otp) !== String(storedOtp)) {
     return next(new AppError("Invalid or Expired OTP", 401));
@@ -79,7 +81,7 @@ const verifyEmail = catchAsync(async (req, res, next) => {
     return next(new AppError("User not found or update failed", 404));
   }
 
-  await redisClient.del(email);
+  await redisClient.del(`verify:${email}`);
 
   return res.json({
     success: true,
@@ -132,7 +134,7 @@ const resendVerification = catchAsync(async (req, res, next) => {
   if (user.isVerified)
     return next(new AppError("User is already verified", 400));
 
-  const existingOtp = await redisClient.get(email);
+  const existingOtp = await redisClient.get(`verify:${email}`);
   if (existingOtp)
     return next(new AppError("Please wait before requesting a new OTP", 429));
 
@@ -152,7 +154,6 @@ const addAddress = catchAsync(async (req, res, next) => {
     req.body.phone = user.phone;
   }
 
-  // If this is the first address or explicitly set as default, make it default
   if (user.addresses.length === 0 || req.body.isDefault) {
     user.addresses.forEach((addr) => (addr.isDefault = false));
     req.body.isDefault = true;
@@ -176,11 +177,16 @@ const removeAddress = catchAsync(async (req, res, next) => {
   const address = user.addresses.id(id);
   if (!address) return next(new AppError("Address not found", 404));
 
+  // Pre-check before mutating: prevent deleting the only remaining address
+  if (user.addresses.length === 1) {
+    return next(new AppError("Cannot delete your only remaining address", 422));
+  }
+
   const wasDefault = address.isDefault;
   user.addresses.pull(id);
 
   // If deleted address was default, promote the first remaining one
-  if (wasDefault && user.addresses.length > 0) {
+  if (wasDefault) {
     user.addresses[0].isDefault = true;
   }
 
@@ -212,6 +218,49 @@ const setDefaultAddress = catchAsync(async (req, res, next) => {
   });
 });
 
+const forgotPassword = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) return next(new AppError("Need Valid Email.", 400));
+  const user = await userModel.findOne({ email, isDeleted: false });
+
+  // Always return the same response to prevent user enumeration
+  if (!user) {
+    return res.json({
+      success: true,
+      message: "If an account exists, an email has been sent with the OTP.",
+    });
+  }
+
+  sendMailEvent.emit("forgot-password", user);
+
+  return res.json({
+    success: true,
+    message: "If an account exists, an email has been sent with the OTP.",
+  });
+});
+
+const resetPassword = catchAsync(async (req, res, next) => {
+  const { email, otp, newPassword } = req.body;
+
+  const user = await userModel.findOne({ email, isDeleted: false });
+  if (!user) return next(new AppError("Invalid or expired OTP", 401));
+
+  const storedOtp = await redisClient.get(`reset:${email}`);
+  if (!storedOtp || String(otp) !== String(storedOtp)) {
+    return next(new AppError("Invalid or expired OTP", 401));
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  await redisClient.del(`reset:${email}`);
+
+  return res.status(200).json({
+    success: true,
+    message: "Password reset successfully. You can now log in.",
+  });
+});
+
 export {
   register,
   login,
@@ -222,4 +271,6 @@ export {
   addAddress,
   removeAddress,
   setDefaultAddress,
+  forgotPassword,
+  resetPassword,
 };

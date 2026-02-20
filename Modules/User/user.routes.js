@@ -3,6 +3,7 @@ import { validate } from "../../Middlewares/validate.js";
 import {
   userValidation,
   addAddressValidation,
+  resetPasswordValidation,
 } from "../../Validations/userValidation.js";
 import { verifyToken } from "../../Middlewares/verifyToken.js";
 import {
@@ -15,6 +16,8 @@ import {
   addAddress,
   removeAddress,
   setDefaultAddress,
+  forgotPassword,
+  resetPassword,
 } from "./user.controller.js";
 import { authLimiter } from "../../Middlewares/rateLimiter.js";
 
@@ -42,10 +45,10 @@ userRoutes.patch(
   setDefaultAddress,
 );
 
-// userRoutes.post("/forgot-password", forgotPassword);
-// userRoutes.patch("/change-password", changePassword);
+userRoutes.post("/forgot-password", authLimiter, forgotPassword);
+userRoutes.patch("/reset-password", authLimiter, validate(resetPasswordValidation), resetPassword);
 
-// userRoutes.post("/reset-password", resetPassword);
+// userRoutes.patch("/change-password", changePassword);
 // userRoutes.get("/me", getProfile);
 // userRoutes.patch("/update-profile", updateProfile);
 

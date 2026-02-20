@@ -3,7 +3,7 @@ import "dotenv/config";
 import otpGenerator from "otp-generator";
 import { redisClient } from "../../Database/redisConnection.js";
 
-export const sendEmail = async (user) => {
+export const sendEmail = async (user, subject, messageType) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -19,29 +19,29 @@ export const sendEmail = async (user) => {
       lowerCaseAlphabets: false,
     });
 
-    await redisClient.set(user.email, otp, {
-      EX: 300,
-    });
+    const redisKey = `${messageType}:${user.email}`;
+    await redisClient.set(redisKey, otp, { EX: 300 });
+
+    const textContent =
+      messageType === "verify"
+        ? "Use the following OTP to verify your account."
+        : "Use the following OTP to reset your password.";
 
     const mailOptions = {
       from: `"E-Commerce" <${process.env.EMAIL}>`,
       to: user.email,
-      subject: "Your Verification Code",
+      subject: subject,
       html: `
-      <div style="font-family: Helvetica, Arial, sans-serif; min-width:1000px; overflow:auto; line-height:2">
-        <div style="margin:50px auto; width:70%; padding:20px 0">
-          <p style="font-size:1.1em">Hi ${user.name || ""},</p>
-          <p>Use the following OTP to complete your login procedures. OTP is valid for 5 minutes.</p>
-          <h2 style="background: #00466a; margin: 0 auto; width: max-content; padding: 0 10px; color: #fff; border-radius: 4px;">
+      <div style="font-family: Arial, sans-serif; padding:20px;">
+          <p>Hi ${user.name || "User"},</p>
+          <p>${textContent} It is valid for 5 minutes.</p>
+          <h2 style="background: #00466a; width: max-content; padding: 10px; color: #fff; border-radius: 4px;">
             ${otp}
           </h2>
-        </div>
-      </div>
-    `,
+      </div>`,
     };
 
     await transporter.sendMail(mailOptions);
-    console.log("Email Sent Successfully");
     return true;
   } catch (error) {
     console.error("Error sending email:", error);

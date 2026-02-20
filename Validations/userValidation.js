@@ -100,6 +100,40 @@ export const addAddressValidation = joi.object({
   isDefault: joi.boolean(),
 });
 
+export const resetPasswordValidation = joi.object({
+  email: joi
+    .string()
+    .email({ tlds: { allow: false } })
+    .required()
+    .messages({
+      "string.empty": "Email is required",
+      "string.email": "Email must be a valid email address",
+    }),
+  otp: joi
+    .string()
+    .length(6)
+    .pattern(/^[0-9]+$/)
+    .required()
+    .messages({
+      "string.empty": "OTP is required",
+      "string.length": "OTP must be 6 digits",
+      "string.pattern.base": "OTP must contain only digits",
+    }),
+  newPassword: joi
+    .string()
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
+    .min(8)
+    .max(128)
+    .required()
+    .messages({
+      "string.empty": "New password is required",
+      "string.min": "Password must be at least 8 characters",
+      "string.max": "Password must not exceed 128 characters",
+      "string.pattern.base":
+        "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character",
+    }),
+});
+
 export const signInValidation = joi.object({
   email: joi
     .string()
