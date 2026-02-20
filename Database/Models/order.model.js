@@ -48,7 +48,7 @@ const orderSchema = new Schema(
       type: Number,
       required: true,
     },
-    discountAmount:Number,
+    discountAmount: Number,
     finalPrice: Number,
     paymentMethod: {
       type: String,
@@ -71,6 +71,8 @@ const orderSchema = new Schema(
     },
     deliveredAt: Date,
     cancelledAt: Date,
+    processedAt: Date,
+    shippedAt: Date
   },
   {
     timestamps: true,
