@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
+import { userModel } from "../Database/Models/user.model.js";
 
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({
@@ -10,9 +11,14 @@ const verifyToken = (req, res, next) => {
   }
 
   const token = authHeader.split(" ")[1];
-
   try {
     const decoded = jwt.verify(token, process.env.SECRETKEY);
+    const user = await userModel.findById(decoded._id);
+    if (!user || user.isDeleted)
+      return res.status(404).json({
+        success: false,
+        message: "User is deleted or banned.",
+      });
     req.user = decoded;
 
     next();
@@ -32,4 +38,24 @@ const verifyToken = (req, res, next) => {
   }
 };
 
+// Optional auth: sets req.user if token is present, but doesn't block guests
+const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return next(); // No token — continue as guest
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRETKEY);
+    req.user = decoded;
+  } catch (err) {
+    // Invalid/expired token — continue as guest
+  }
+
+  next();
+};
+
+export { verifyToken, optionalAuth };
 export default verifyToken;

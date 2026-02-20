@@ -11,17 +11,19 @@ import { categoryModel } from "./Database/Models/category.model.js";
 import categoryRoutes from "./Modules/Category/category.routes.js";
 import userRoutes from "./Modules/User/user.routes.js";
 import adminRouter from "./Modules/Admin/admin.routes.js";
+import cookieParser from "cookie-parser";
 import "./Utils/Events/sendEmailEvent.js";
 
 import { cartModel } from "./Database/Models/cart.model.js";
 import { couponModel } from "./Database/Models/coupon.model.js";
-// import cartRoutes from "./Modules/Cart/cart.routes.js";
+import cartRoutes from "./Modules/Cart/cart.routes.js";
 
 dbConnection();
 redisConnection();
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
 
 orderModel;
 categoryModel;
@@ -32,10 +34,9 @@ couponModel;
 app.use(userRoutes);
 app.use(categoryRoutes);
 app.use(productsRoutes);
+app.use(cartRoutes);
 app.use(orderRoutes);
-app.use(adminRouter);
-
-// app.use(cartRoutes)
+app.use("/admin", adminRouter);
 app.use(globalErrorHandler);
 
 app.listen(3000, () => {

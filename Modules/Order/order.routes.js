@@ -4,7 +4,7 @@ import { orderModel } from "../../Database/Models/order.model.js";
 import { orderValidation } from "../../Validations/orderValidation.js";
 import { isAuthor } from "../../Middlewares/isAuthor.js";
 import { cartModel } from "../../Database/Models/cart.model.js";
-import verifyToken from "../../Middlewares/verifyToken.js";
+import { verifyToken } from "../../Middlewares/verifyToken.js";
 import {
   addOrder,
   getUserOrders,
@@ -15,8 +15,13 @@ import {
 
 const orderRoutes = express.Router();
 
-orderRoutes.get("/orders",verifyToken, getUserOrders);
-orderRoutes.get("/orders/:id",isAuthor(orderModel, "order"), getOrderById);
+orderRoutes.get("/orders", verifyToken, getUserOrders);
+orderRoutes.get(
+  "/orders/:id",
+  verifyToken,
+  isAuthor(orderModel, "order"),
+  getOrderById,
+);
 orderRoutes.post(
   "/orders",
   verifyToken,

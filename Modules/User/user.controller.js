@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { sendMailEvent } from "../../Utils/Events/sendEmailEvent.js";
 import { redisClient } from "../../Database/redisConnection.js";
+import { mergeGuestCart } from "../Cart/cart.controller.js";
 
 const register = catchAsync(async (req, res, next) => {
   const newUser = await userModel.create(req.body);
@@ -37,6 +38,20 @@ const login = catchAsync(async (req, res, next) => {
   const match = await bcrypt.compare(req.body.password, foundUser.password);
   if (match) {
     const token = foundUser.generateToken();
+    
+     const refreshToken = foundUser.generateRefreshToken();
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      //secure: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    
+    // Merge guest cart if sessionId provided
+    const sessionId = req.body.sessionId || req.headers["x-session-id"];
+    if (sessionId) {
+      await mergeGuestCart(foundUser._id, sessionId);
+    }
+   
     res.json({ success: true, data: token });
   } else {
     return next(new AppError("Email or Password Invalid", 401));
@@ -72,4 +87,37 @@ const verifyEmail = catchAsync(async (req, res, next) => {
   });
 });
 
-export { register, login, verifyEmail };
+const refresh = catchAsync(async (req, res, next) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) return next(new AppError("Access Denied", 401));
+
+  const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+  const user = await userModel.findById(decoded._id);
+  if (!user || user.isDeleted) {
+    return next(new AppError("User not found or deleted", 401));
+  }
+
+  const newAccessToken = user.generateToken();
+
+  res.json({ success: true, data: newAccessToken });
+});
+
+// auth.routes.js
+
+const logout = catchAsync(async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (!refreshToken) return next(new AppError("Access Denied.", 401));
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    // secure: true,
+    // sameSite: 'Strict',
+  });
+  return res.status(200).json({
+    success: true,
+    message: "Logged out successfully. See ya!",
+  });
+});
+export { register, login, verifyEmail, refresh, logout };

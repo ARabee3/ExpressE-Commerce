@@ -65,8 +65,12 @@ const cartSchema = new Schema(
 );
 
 // Compound indexes -- better performance :) --
-cartSchema.index({ userId: 1, isDeleted: 1 });
-cartSchema.index({ sessionId: 1, isDeleted: 1 });
+// this creates error
+// (Duplicate schema index on {"sessionId":1,"isDeleted":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.)
+// (Duplicate schema index on {"userId":1,"isDeleted":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.)
+
+// cartSchema.index({ userId: 1, isDeleted: 1 });
+// cartSchema.index({ sessionId: 1, isDeleted: 1 });
 
 // each user can have only one active cart, and each session can have only one active cart (for guests)
 // they can have multiple carts if they are deleted (soft delete) -- this allows for cart history and recovery if needed
