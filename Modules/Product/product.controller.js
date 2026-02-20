@@ -1,6 +1,7 @@
 import { productModel } from "../../Database/Models/product.model.js";
 import { categoryModel } from "../../Database/Models/category.model.js";
 import { catchAsync } from "../../Utils/Error/catchAsync.js";
+import slugify from "slugify";
 //create product
 export const createProduct = catchAsync(async (req, res, next) => {
   const product = await productModel.insertOne(req.body);
@@ -75,5 +76,59 @@ export const getProducts = catchAsync(async (req, res, next) => {
     totalPages: Math.ceil(totalProducts / limitNumber),
     currentPage: pageNumber,
     products,
+  });
+});
+
+//updateProduct
+export const updateProduct = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const allowedFields = [
+    "name",
+    "description",
+    "price",
+    "stock",
+    "images",
+    "category",
+  ];
+
+  const filteredBody = {};
+  allowedFields.forEach((field) => {
+    if (req.body[field] !== undefined) {
+      filteredBody[field] = req.body[field];
+    }
+  });
+
+  if (req.body.name) {
+    req.body.slug = slugify(req.body.name, { lower: true });
+  }
+  const updatedProduct = await productModel.findByIdAndUpdate(id, filteredBody, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!updatedProduct) {
+    return res.status(404).json({ message: "Product not found" });
+  }
+
+  res.status(200).json({
+    status: "success",
+    data: updatedProduct,
+  });
+});
+
+//delete Product
+export const deleteProduct = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  const deletedProduct = await productModel.findByIdAndDelete(id);
+
+  if (!deletedProduct) {
+    return res.status(404).json({ message: "Product not found" });
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Product deleted successfully",
+    
   });
 });
