@@ -220,10 +220,32 @@ const updatePaidStatus = catchAsync(async (req, res, next) => {
       new: true,
     },
   );
+
+  if (!updatedOrder) {
+    return next(new AppError("Order status is not pending", 400));
+  }
+  
   res.status(200).json({
     message: "order paid status updated",
     data: updatedOrder,
   });
 });
 
-export { addOrder, getUserOrders, getOrderById, cancelOrder, updatePaidStatus };
+// track order status
+const trackOrder = catchAsync(async (req, res, next) => {
+    const orderId = req.params.id;
+    const order = await orderModel.findById(orderId);
+
+    res.status(200).json({
+      message: "order status",
+      data: {
+        status: order.status,
+        processedAt: order.processedAt,
+        shippedAt: order.shippedAt,
+        deliveredAt: order.deliveredAt,
+        cancelledAt: order.cancelledAt
+      },
+    });
+})
+
+export { addOrder, getUserOrders, getOrderById, cancelOrder, updatePaidStatus, trackOrder };

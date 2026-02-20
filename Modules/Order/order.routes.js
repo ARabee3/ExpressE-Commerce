@@ -10,6 +10,7 @@ import {
   getOrderById,
   cancelOrder,
   updatePaidStatus,
+  trackOrder,
 } from "./order.controller.js";
 import { validate } from "../../Middlewares/validate.js";
 
@@ -29,6 +30,7 @@ orderRoutes.post(
   isAuthor(cartModel, "cart"),
   addOrder,
 );
-orderRoutes.put("/orders/:id/cancel", verifyToken, cancelOrder);
-orderRoutes.put("/orders/:id/pay", verifyToken, updatePaidStatus);
+orderRoutes.put("/orders/:id/cancel", verifyToken,isAuthor(orderModel, "order"), cancelOrder);
+orderRoutes.put("/orders/:id/pay", verifyToken,isAuthor(orderModel, "order"), updatePaidStatus);
+orderRoutes.get("/orders/:id/track", verifyToken,isAuthor(orderModel, "order"), trackOrder);
 export default orderRoutes;
