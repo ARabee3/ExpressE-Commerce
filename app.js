@@ -20,10 +20,10 @@ import { cartModel } from "./Database/Models/cart.model.js";
 import { couponModel } from "./Database/Models/coupon.model.js";
 import cartRoutes from "./Modules/Cart/cart.routes.js";
 import helmet from "helmet";
-import { globalLimiter } from "./Middlewares/rateLimiter.js";
+import { globalLimiter, initLimiters } from "./Middlewares/rateLimiter.js";
 
-dbConnection();
-redisConnection();
+await redisConnection();
+initLimiters();
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -56,5 +56,5 @@ app.use((req, res, next) => {
 app.use(globalErrorHandler);
 
 app.listen(port, () => {
-  console.log("Server is running successfully at port 3000");
+  console.log(`Server is running successfully at port ${port}`);
 });
