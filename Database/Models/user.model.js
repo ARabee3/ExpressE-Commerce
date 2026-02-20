@@ -52,9 +52,32 @@ userSchema.pre("save", hashPassword);
 
 userSchema.methods.generateToken = function () {
   return jwt.sign(
-    { _id: this._id, email: this.email, role: this.role },
+    {
+      _id: this._id,
+      email: this.email,
+      role: this.role,
+      isDeleted: this.isDeleted,
+    },
     process.env.SECRETKEY,
-    { expiresIn: "1h" }, // You can also use an environment variable for expiration
+    { expiresIn: "30m" },
   );
 };
+
+userSchema.methods.generateRefreshToken = function () {
+  const refreshToken = jwt.sign(
+    {
+      _id: this._id,
+      email: this.email,
+      role: this.role,
+      isDeleted: this.isDeleted,
+    },
+    process.env.REFRESH_TOKEN_SECRET,
+    {
+      expiresIn: "7d",
+    },
+  );
+
+  return refreshToken;
+};
+
 export const userModel = mongoose.model("User", userSchema);
