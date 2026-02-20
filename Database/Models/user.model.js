@@ -38,6 +38,28 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    addresses: [
+      {
+        city: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        street: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        phone: {
+          type: String,
+          trim: true,
+        },
+        isDefault: {
+          type: Boolean,
+          default: false,
+        },
+      },
+    ],
     wishlist: [
       {
         type: Schema.Types.ObjectId,

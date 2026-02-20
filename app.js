@@ -17,12 +17,16 @@ import "./Utils/Events/sendEmailEvent.js";
 import { cartModel } from "./Database/Models/cart.model.js";
 import { couponModel } from "./Database/Models/coupon.model.js";
 import cartRoutes from "./Modules/Cart/cart.routes.js";
+import helmet from "helmet";
 
 dbConnection();
 redisConnection();
 const app = express();
 
+const port = process.env.PORT || 3000;
+
 app.use(express.json());
+app.use(helmet());
 app.use(cookieParser());
 
 orderModel;
@@ -39,6 +43,6 @@ app.use(orderRoutes);
 app.use("/admin", adminRouter);
 app.use(globalErrorHandler);
 
-app.listen(3000, () => {
+app.listen(port, () => {
   console.log("Server is running successfully at port 3000");
 });
