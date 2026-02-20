@@ -16,24 +16,31 @@ import {
   removeAddress,
   setDefaultAddress,
 } from "./user.controller.js";
+import { authLimiter } from "../../Middlewares/rateLimiter.js";
 
 const userRoutes = express.Router();
 
-userRoutes.post("/register", validate(userValidation), register);
-userRoutes.post("/login", login);
-userRoutes.post("/logout", verifyToken, logout);
-userRoutes.post("/refresh", verifyToken, refresh);
-userRoutes.post("/verify-email", verifyToken, verifyEmail);
-userRoutes.post("/resend-verification", resendVerification);
+userRoutes.post("/register", authLimiter, validate(userValidation), register);
+userRoutes.post("/login", authLimiter, login);
+userRoutes.post("/logout", verifyToken, authLimiter, logout);
+userRoutes.post("/refresh", verifyToken, authLimiter, refresh);
+userRoutes.post("/verify-email", verifyToken, authLimiter, verifyEmail);
+userRoutes.post("/resend-verification", authLimiter, resendVerification);
 
 userRoutes.patch(
   "/address",
   verifyToken,
+  authLimiter,
   validate(addAddressValidation),
   addAddress,
 );
-userRoutes.delete("/address/:id", verifyToken, removeAddress);
-userRoutes.patch("/address/:id/default", verifyToken, setDefaultAddress);
+userRoutes.delete("/address/:id", verifyToken, authLimiter, removeAddress);
+userRoutes.patch(
+  "/address/:id/default",
+  verifyToken,
+  authLimiter,
+  setDefaultAddress,
+);
 
 // userRoutes.post("/forgot-password", forgotPassword);
 // userRoutes.patch("/change-password", changePassword);

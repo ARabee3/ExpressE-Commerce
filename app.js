@@ -13,21 +13,29 @@ import userRoutes from "./Modules/User/user.routes.js";
 import adminRouter from "./Modules/Admin/admin.routes.js";
 import cookieParser from "cookie-parser";
 import "./Utils/Events/sendEmailEvent.js";
+import cors from "cors";
+import { AppError } from "./Utils/Error/AppError.js";
 
 import { cartModel } from "./Database/Models/cart.model.js";
 import { couponModel } from "./Database/Models/coupon.model.js";
 import cartRoutes from "./Modules/Cart/cart.routes.js";
 import helmet from "helmet";
+import { globalLimiter } from "./Middlewares/rateLimiter.js";
 
 dbConnection();
 redisConnection();
 const app = express();
-
 const port = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(cors());
 app.use(helmet());
+
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
+
+app.set("trust proxy", 1);
+app.use(globalLimiter);
 
 orderModel;
 categoryModel;
@@ -41,6 +49,10 @@ app.use(productsRoutes);
 app.use(cartRoutes);
 app.use(orderRoutes);
 app.use("/admin", adminRouter);
+
+app.use((req, res, next) => {
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+});
 app.use(globalErrorHandler);
 
 app.listen(port, () => {

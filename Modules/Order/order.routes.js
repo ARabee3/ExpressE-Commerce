@@ -1,5 +1,4 @@
 import express from "express";
-import { validateData } from "../../Middlewares/validationDate.js";
 import { orderModel } from "../../Database/Models/order.model.js";
 import { orderValidation } from "../../Validations/orderValidation.js";
 import { isAuthor } from "../../Middlewares/isAuthor.js";
@@ -12,6 +11,7 @@ import {
   cancelOrder,
   updatePaidStatus,
 } from "./order.controller.js";
+import { validate } from "../../Middlewares/validate.js";
 
 const orderRoutes = express.Router();
 
@@ -25,7 +25,7 @@ orderRoutes.get(
 orderRoutes.post(
   "/orders",
   verifyToken,
-  validateData(orderValidation),
+  validate(orderValidation),
   isAuthor(cartModel, "cart"),
   addOrder,
 );
