@@ -11,6 +11,7 @@ import {
   getOrderById,
   cancelOrder,
   updatePaidStatus,
+  createPaymentIntent,
 } from "./order.controller.js";
 
 const orderRoutes = express.Router();
@@ -30,5 +31,6 @@ orderRoutes.post(
   addOrder,
 );
 orderRoutes.put("/orders/:id/cancel", verifyToken, cancelOrder);
+orderRoutes.post("/orders/:id/pay-intent", verifyToken, createPaymentIntent);
 orderRoutes.put("/orders/:id/pay", verifyToken, updatePaidStatus);
 export default orderRoutes;

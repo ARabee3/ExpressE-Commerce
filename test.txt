@@ -461,3 +461,7 @@ Content-Type: application/json
   "phone": "abc"
 }
 Expected: 402 (validation error about phone format/length)
+
+
+
+look at all the endpoints and create a postman JSON test for testing all cases 
