@@ -10,17 +10,18 @@ export const sendOrderStatusEmail = async (
 ) => {
   const statusInfo = getStatusInfo(status);
 
+  const senderMail = process.env.EMAIL;
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: "arabeea7104@gmail.com",
+      user: senderMail,
       pass: process.env.GOOGLE_APP_PASSWORD,
     },
   });
 
   try {
     const mailOptions = {
-      from: `"E-Commerce Store" <arabeea7104@gmail.com>`,
+      from: `"E-Commerce Store" <${senderMail}>`,
       to: userEmail,
       subject: `${statusInfo.subject} - Order #${orderId}`,
       html: generateEmailHTML(userName, orderId, status, statusInfo),
