@@ -6,7 +6,7 @@ export const validate = (schema) => {
     const { error } = schema.validate(inputs, { abortEarly: false });
     if (error) {
       const errMsg = error.details.map((err) => err.message).join(", ");
-      return next(new AppError(errMsg, 402));
+      return next(new AppError(errMsg, 422));
     }
     next();
   };
