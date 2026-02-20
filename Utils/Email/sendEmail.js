@@ -24,7 +24,7 @@ export const sendEmail = async (user) => {
     });
 
     const mailOptions = {
-      from: `"E-Commerce" <arabeea7104@gmail.com>`,
+      from: `"E-Commerce" <${process.env.EMAIL}>`,
       to: user.email,
       subject: "Your Verification Code",
       html: `
