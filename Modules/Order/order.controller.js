@@ -33,82 +33,88 @@ const getOrderById = catchAsync(async (req, res, next) => {
 });
 
 const addOrder = catchAsync(async (req, res, next) => {
-  // get data from req.body
-  let userId = req.user._id;
-  let cartId = req.body.cartId;
-  let shippingAddress = req.body.shippingAddress;
-  let paymentMethod = req.body.paymentMethod;
-  let couponId = req.body.couponId;
+  const userId = req.user._id;
+  const { cartId, shippingAddress, paymentMethod } = req.body;
 
-  // check if cart has items or not
-  let cart = await cartModel.findById(cartId);
-  if (cart.items.length === 0) {
-    return next(new AppError("Cart is empty ", 404));
+  // Find cart and validate
+  const cart = await cartModel.findById(cartId).populate("items.productId");
+  if (!cart) {
+    return next(new AppError("Cart not found", 404));
   }
-  let orderItems = [];
+
+  // Filter active items only
+  const activeItems = cart.items.filter((item) => !item.isDeleted);
+  if (activeItems.length === 0) {
+    return next(new AppError("Cart is empty", 400));
+  }
+
+  // Build order items and calculate total
+  const orderItems = [];
   let totalOrderPrice = 0;
-  let discountAmount = 0;
-  let finalPrice = totalOrderPrice;
-  for (const item of cart.items) {
-    let product = await productModel.findById(item.productId);
-    // check if exist
+
+  for (const item of activeItems) {
+    const product = item.productId;
     if (!product) {
       return next(
-        new AppError(`product with id ${item.productId} is not found`, 404),
+        new AppError(`Product with id ${item.productId} is not found`, 404),
       );
     }
 
-    // check if in stock
-    if (product.stockQuantity < item.quantity) {
+    if (product.stock < item.quantity) {
       return next(
         new AppError(
-          `Insufficient stock for product: ${product.title} Just exist ${product.stockQuantity}`,
-          404,
+          `Insufficient stock for "${product.name}". Only ${product.stock} available`,
+          400,
         ),
       );
     }
-    // calc total price for every item
+
     totalOrderPrice += product.price * item.quantity;
 
-    // add items to orderItems
     orderItems.push({
       productId: product._id,
-      productTitle: product.title,
+      productTitle: product.name,
       productImg:
         product.images && product.images.length > 0 ? product.images[0] : "",
       price: product.price,
       quantity: item.quantity,
     });
   }
-  if (couponId) {
-    let coupon = await couponModel.findById(couponId);
-    if (!coupon) {
-      return next(new AppError(`coupon with id ${couponId} is not found`, 404));
-    }
-    // check if skip expiryDate or not
-    if (coupon.expireDate && new Date(coupon.expireDate) < new Date()) {
-      return next(new AppError(`coupon with id ${couponId} is expired`, 400));
-    }
 
-    // check if coupn skip usage count
-    if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-      return next(
-        new AppError(`coupon with id ${couponId} reached usage limit`, 400),
+  // Handle coupon from cart
+  let discountAmount = 0;
+  let finalPrice = totalOrderPrice;
+  let couponId = null;
+
+  if (cart.appliedCoupon) {
+    const coupon = await couponModel.findById(cart.appliedCoupon);
+    if (coupon && coupon.isActive) {
+      if (coupon.expireDate && new Date(coupon.expireDate) < new Date()) {
+        return next(new AppError("Applied coupon has expired", 400));
+      }
+
+      if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+        return next(new AppError("Applied coupon reached usage limit", 400));
+      }
+
+      if (coupon.discountType === "percentage") {
+        discountAmount = (totalOrderPrice * coupon.discount) / 100;
+      } else {
+        discountAmount = coupon.discount;
+      }
+
+      discountAmount = Math.min(discountAmount, totalOrderPrice);
+      finalPrice = totalOrderPrice - discountAmount;
+      couponId = coupon._id;
+
+      await couponModel.updateOne(
+        { _id: coupon._id },
+        { $inc: { usedCount: 1 } },
       );
     }
-    // if discount is percentage
-    if (coupon.discountType === "percentage") {
-      discountAmount = (totalOrderPrice * coupon.discount) / 100;
-    } else {
-      discountAmount = coupon.discount;
-    }
-
-    finalPrice = totalOrderPrice - discountAmount;
-    // update used count of this coupon and inc it by one
-    await couponModel.updateOne({ _id: couponId }, { $inc: { usedCount: 1 } });
   }
 
-  // add order
+  // Create order
   const order = await orderModel.create({
     userId,
     shippingAddress,
@@ -117,29 +123,24 @@ const addOrder = catchAsync(async (req, res, next) => {
     discountAmount,
     finalPrice,
     paymentMethod,
-    couponId: couponId || null,
+    couponId,
   });
 
-  // update stock
+  // Update stock
   for (const item of orderItems) {
     await productModel.findByIdAndUpdate(item.productId, {
       $inc: { stock: -item.quantity },
     });
   }
 
+  // Soft delete the cart after successful order
+  cart.isDeleted = true;
+  await cart.save();
+
   res.status(201).json({
-    success: true,
+    status: "success",
     message: "Order created successfully",
-    data: {
-      orderId: order._id,
-      orderItems: order.orderItems,
-      totalOrderPrice: order.totalOrderPrice,
-      discountAmount: order.discountAmount,
-      finalPrice: order.finalPrice,
-      status: order.status,
-      shippingAddress: order.shippingAddress,
-      paymentMethod: order.paymentMethod,
-    },
+    data: order,
   });
 });
 
@@ -153,8 +154,12 @@ const cancelOrder = catchAsync(async (req, res, next) => {
     return next(new AppError("order not found", 404));
   }
 
-  // can only cancel pending or processing orders
-  if (!["Pending", "Processing"].includes(order.status)) {
+  // can only cancel unpaid pending orders
+  if (order.isPaid) {
+    return next(new AppError("Cannot cancel a paid order", 400));
+  }
+
+  if (order.status !== "Pending") {
     return next(
       new AppError(`Cannot cancel order with status: ${order.status}`, 400),
     );
@@ -221,4 +226,4 @@ const updatePaidStatus = catchAsync(async (req, res, next) => {
   });
 });
 
-export { addOrder, getUserOrders,getOrderById,cancelOrder,updatePaidStatus };
+export { addOrder, getUserOrders, getOrderById, cancelOrder, updatePaidStatus };

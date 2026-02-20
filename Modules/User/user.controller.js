@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { sendMailEvent } from "../../Utils/Events/sendEmailEvent.js";
 import { redisClient } from "../../Database/redisConnection.js";
+import { mergeGuestCart } from "../Cart/cart.controller.js";
 
 const register = catchAsync(async (req, res, next) => {
   const newUser = await userModel.create(req.body);
@@ -37,13 +38,20 @@ const login = catchAsync(async (req, res, next) => {
   const match = await bcrypt.compare(req.body.password, foundUser.password);
   if (match) {
     const token = foundUser.generateToken();
-    const refreshToken = foundUser.generateRefreshToken();
+    
+     const refreshToken = foundUser.generateRefreshToken();
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       //secure: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-
+    
+    // Merge guest cart if sessionId provided
+    const sessionId = req.body.sessionId || req.headers["x-session-id"];
+    if (sessionId) {
+      await mergeGuestCart(foundUser._id, sessionId);
+    }
+   
     res.json({ success: true, data: token });
   } else {
     return next(new AppError("Email or Password Invalid", 401));
