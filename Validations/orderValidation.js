@@ -1,6 +1,12 @@
-import joi from "joi"
+import joi from "joi";
 
 export const orderValidation = joi.object({
+  cartId: joi.string().hex().length(24).required().messages({
+    "string.empty": "Cart ID can't be empty",
+    "string.hex": "Cart ID must be a valid ObjectId",
+    "string.length": "Cart ID must be 24 characters",
+    "any.required": "Cart ID is required",
+  }),
   shippingAddress: joi
     .object({
       street: joi.string().min(3).max(150).required().messages({
@@ -34,8 +40,10 @@ export const orderValidation = joi.object({
     }),
   status: joi
     .string()
-    .valid("Pending", "Processing", "Shipped", "Delivered", "Cancelled").insensitive().messages({
-        "any.only" : "Status must be one of (Pending, Processing, Shipped, Delivered, Cancelled)"
+    .valid("Pending", "Processing", "Shipped", "Delivered", "Cancelled")
+    .insensitive()
+    .messages({
+      "any.only":
+        "Status must be one of (Pending, Processing, Shipped, Delivered, Cancelled)",
     }),
-    
 });

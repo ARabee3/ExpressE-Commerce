@@ -15,7 +15,7 @@ import "./Utils/Events/sendEmailEvent.js";
 
 import { cartModel } from "./Database/Models/cart.model.js";
 import { couponModel } from "./Database/Models/coupon.model.js";
-// import cartRoutes from "./Modules/Cart/cart.routes.js";
+import cartRoutes from "./Modules/Cart/cart.routes.js";
 
 dbConnection();
 redisConnection();
@@ -32,10 +32,9 @@ couponModel;
 app.use(userRoutes);
 app.use(categoryRoutes);
 app.use(productsRoutes);
+app.use(cartRoutes);
 app.use(orderRoutes);
-app.use(adminRouter);
-
-// app.use(cartRoutes)
+app.use("/admin", adminRouter);
 app.use(globalErrorHandler);
 
 app.listen(3000, () => {

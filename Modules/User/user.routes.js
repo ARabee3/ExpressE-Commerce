@@ -2,7 +2,7 @@ import express from "express";
 import { validate } from "../../Middlewares/validate.js";
 import { userValidation } from "../../Validations/userValidation.js";
 import { register, login, verifyEmail } from "./user.controller.js";
-import verifyToken from "../../Middlewares/verifyToken.js";
+import { verifyToken } from "../../Middlewares/verifyToken.js";
 
 const userRoutes = express.Router();
 
