@@ -11,6 +11,7 @@ import { categoryModel } from "./Database/Models/category.model.js";
 import categoryRoutes from "./Modules/Category/category.routes.js";
 import userRoutes from "./Modules/User/user.routes.js";
 import adminRouter from "./Modules/Admin/admin.routes.js";
+import cookieParser from "cookie-parser";
 import "./Utils/Events/sendEmailEvent.js";
 
 import { cartModel } from "./Database/Models/cart.model.js";
@@ -22,6 +23,7 @@ redisConnection();
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
 
 orderModel;
 categoryModel;
