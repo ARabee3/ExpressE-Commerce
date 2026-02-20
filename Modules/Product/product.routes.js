@@ -1,12 +1,18 @@
 import express from "express";
-import { createProduct, getProducts } from "./product.controller.js";
-import { productValidation } from "../../Validations/productValidation.js";
+import { createProduct, getProducts, updateProduct, deleteProduct } from "./product.controller.js";
+import { productValidation, updateProductValidation, deleteProductValidation } from "../../Validations/productValidation.js";
 import { validate } from "../../Middlewares/validate.js";
+import { verifyToken } from "../../Middlewares/verifyToken.js";
+import { isAdmin } from "../../Middlewares/isAdmin.js";
+
 
 const productsRoutes = express.Router();
 
-productsRoutes.post("/products", validate(productValidation), createProduct);
+productsRoutes.post("/products", verifyToken,isAdmin,validate(productValidation), createProduct);
 
 productsRoutes.get("/products", getProducts);
+
+productsRoutes.put("/products/:id", verifyToken,isAdmin,validate(updateProductValidation), updateProduct);
+productsRoutes.delete("/products/:id", verifyToken,isAdmin,validate(deleteProductValidation), deleteProduct);
 
 export default productsRoutes;

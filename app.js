@@ -21,7 +21,7 @@ import { couponModel } from "./Database/Models/coupon.model.js";
 import cartRoutes from "./Modules/Cart/cart.routes.js";
 import helmet from "helmet";
 import { globalLimiter, initLimiters } from "./Middlewares/rateLimiter.js";
-
+dbConnection();
 await redisConnection();
 initLimiters();
 const app = express();
