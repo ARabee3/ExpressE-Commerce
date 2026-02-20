@@ -82,7 +82,7 @@ const orderSchema = new Schema(
 
 //compound for retrival user history orders
 orderSchema.index({
-    userId:1,
+   // userId:1,
     createdAt:-1
 })
 
