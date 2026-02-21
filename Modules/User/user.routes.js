@@ -4,6 +4,8 @@ import {
   userValidation,
   addAddressValidation,
   resetPasswordValidation,
+  changePasswordValidation,
+  updateProfileValidation,
 } from "../../Validations/userValidation.js";
 import { verifyToken } from "../../Middlewares/verifyToken.js";
 import {
@@ -18,6 +20,11 @@ import {
   setDefaultAddress,
   forgotPassword,
   resetPassword,
+  changePassword,
+  getProfile,
+  updateProfile,
+  addToWishlist,
+  removeFromWishlist,
 } from "./user.controller.js";
 import { authLimiter } from "../../Middlewares/rateLimiter.js";
 
@@ -53,8 +60,21 @@ userRoutes.patch(
   resetPassword,
 );
 
-// userRoutes.patch("/change-password", changePassword);
-// userRoutes.get("/me", getProfile);
-// userRoutes.patch("/update-profile", updateProfile);
+userRoutes.patch(
+  "/change-password",
+  verifyToken,
+  validate(changePasswordValidation),
+  changePassword,
+);
+userRoutes.get("/me", verifyToken, getProfile);
+userRoutes.patch(
+  "/update-profile",
+  verifyToken,
+  validate(updateProfileValidation),
+  updateProfile,
+);
+userRoutes.patch("/wishlist/:productId", verifyToken, addToWishlist);
+userRoutes.delete("/wishlist/:productId", verifyToken, removeFromWishlist);
 
 export default userRoutes;
+
