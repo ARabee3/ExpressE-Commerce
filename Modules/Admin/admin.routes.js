@@ -25,7 +25,7 @@ adminRouter.delete("/users/:id", isAdmin, deleteUser);
 adminRouter.put("/users/:id/role", isAdmin, updateUserRole);
 
 adminRouter.get("/orders", isAdmin, getAllOrders);
-// adminRouter.get("/orders/:id", isAdmin, getOrderById);
+adminRouter.get("/orders/:id", isAdmin, getOrderById);
 adminRouter.put("/orders/:id/status", isAdmin, updateOrderStatus);
 adminRouter.delete("/orders/:id", isAdmin, deleteOrder);
 
