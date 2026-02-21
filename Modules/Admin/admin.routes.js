@@ -7,6 +7,10 @@ import {
   updateOrderStatus,
   deleteOrder,
   getDashboardStats,
+  getAllSellers,
+  approveSeller,
+  suspendSeller,
+  reactiveSeller
 } from "./admin.controller.js";
 import { Router } from "express";
 import { isAdmin } from "../../Middlewares/isAdmin.js";
@@ -55,4 +59,9 @@ adminRouter.put(
 );
 adminRouter.delete("/coupons/:id", isAdmin, deleteCoupon);
 
+//routes to control sellers
+adminRouter.get("/sellers", isAdmin, getAllSellers);
+adminRouter.put("/sellers/:id/approve", isAdmin, approveSeller);
+adminRouter.put("/sellers/:id/suspend", isAdmin, suspendSeller);
+adminRouter.put("/sellers/:id/reactivate", isAdmin, reactiveSeller);
 export default adminRouter;

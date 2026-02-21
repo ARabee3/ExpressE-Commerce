@@ -22,6 +22,7 @@ import { couponModel } from "./Database/Models/coupon.model.js";
 import cartRoutes from "./Modules/Cart/cart.routes.js";
 import helmet from "helmet";
 import { globalLimiter, initLimiters } from "./Middlewares/rateLimiter.js";
+import sellerRoutes from "./Modules/Seller/seller.routes.js";
 dbConnection();
 await redisConnection();
 initLimiters();
@@ -51,6 +52,7 @@ app.use(productsRoutes);
 app.use(cartRoutes);
 app.use(orderRoutes);
 app.use("/admin", adminRouter);
+app.use(sellerRoutes);
 
 app.use((req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
