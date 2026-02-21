@@ -3,6 +3,11 @@ import slugify from "slugify";
 
 const productSchema = new mongoose.Schema(
   {
+    sellerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     name: {
       type: String,
       required: [true, "Product name is required"],
