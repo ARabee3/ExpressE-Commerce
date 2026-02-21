@@ -7,6 +7,11 @@ const orderSchema = new Schema(
       ref: "User",
       required: true,
     },
+    cartId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Cart",
+      required: true,
+    },
     shippingAddress: {
       street: {
         type: String,
@@ -72,24 +77,19 @@ const orderSchema = new Schema(
     deliveredAt: Date,
     cancelledAt: Date,
     processedAt: Date,
-    shippedAt: Date
+    shippedAt: Date,
   },
   {
     timestamps: true,
   },
 );
 
-
-// index filteration
-
-//compound for retrival user history orders
 orderSchema.index({
-   // userId:1,
-    createdAt:-1
-})
+  createdAt: -1,
+});
 
 orderSchema.index({
-  status: 1
-})
+  status: 1,
+});
 
-export const orderModel = mongoose.model("Order",orderSchema)
+export const orderModel = mongoose.model("Order", orderSchema);

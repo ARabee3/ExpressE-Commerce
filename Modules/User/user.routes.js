@@ -46,7 +46,12 @@ userRoutes.patch(
 );
 
 userRoutes.post("/forgot-password", authLimiter, forgotPassword);
-userRoutes.patch("/reset-password", authLimiter, validate(resetPasswordValidation), resetPassword);
+userRoutes.patch(
+  "/reset-password",
+  authLimiter,
+  validate(resetPasswordValidation),
+  resetPassword,
+);
 
 // userRoutes.patch("/change-password", changePassword);
 // userRoutes.get("/me", getProfile);

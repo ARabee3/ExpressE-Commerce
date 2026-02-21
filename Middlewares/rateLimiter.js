@@ -21,7 +21,7 @@ export const initLimiters = () => {
 
   _authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: 80,
     store: new RedisStore({
       sendCommand: (...args) => redisClient.sendCommand(args),
       prefix: "rl-auth:",
