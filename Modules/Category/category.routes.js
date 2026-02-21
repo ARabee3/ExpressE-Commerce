@@ -8,7 +8,7 @@ import { isAdmin } from "../../Middlewares/isAdmin.js";
 
 const router = express.Router();
 
-router.post("/categories", validate(createCategoryValidation), createCategory);
+router.post("/categories", verifyToken, isAdmin, validate(createCategoryValidation), createCategory);
 
 router.get("/categories", getCategories);
 
