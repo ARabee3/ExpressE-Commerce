@@ -1,6 +1,10 @@
 import express from "express";
 import { validate } from "../../Middlewares/validate.js";
-import { userValidation } from "../../Validations/userValidation.js";
+import {
+  userValidation,
+  addAddressValidation,
+  resetPasswordValidation,
+} from "../../Validations/userValidation.js";
 import { verifyToken } from "../../Middlewares/verifyToken.js";
 import {
   register,

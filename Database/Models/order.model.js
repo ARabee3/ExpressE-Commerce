@@ -7,7 +7,11 @@ const orderSchema = new Schema(
       ref: "User",
       required: true,
     },
-
+    cartId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Cart",
+      required: true,
+    },
     shippingAddress: {
       street: {
         type: String,
@@ -80,11 +84,7 @@ const orderSchema = new Schema(
   },
 );
 
-// index filteration
-
-//compound for retrival user history orders
 orderSchema.index({
-  // userId:1,
   createdAt: -1,
 });
 

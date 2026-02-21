@@ -1,39 +1,49 @@
 {
   "info": {
-    "_postman_id": "c67bd8e2-6b69-4b20-8a6f-fb6f525f7d9b",
-    "name": "Express E-Commerce API - Full Test Cases",
+    "_postman_id": "8b4f54e9-6a7e-4fe7-9736-8dd8ba3a2c09",
+    "name": "Express E-Commerce API - Full Coverage",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Comprehensive Postman collection covering core success and failure cases for all discovered endpoints in this project."
+    "description": "Regenerated from current routes. Covers user, category, product, cart, orders, admin, coupons, and webhook endpoints with required variables."
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "userEmail", "value": "testuser@example.com" },
+    { "key": "userPassword", "value": "Aa@123456" },
+    { "key": "userName", "value": "Test User" },
+    { "key": "userPhone", "value": "+201000000000" },
+    { "key": "adminEmail", "value": "admin@example.com" },
+    { "key": "adminPassword", "value": "Admin@123456" },
+
     { "key": "accessToken", "value": "" },
     { "key": "adminToken", "value": "" },
+    { "key": "otp", "value": "" },
+
     { "key": "sessionId", "value": "" },
-    { "key": "userId", "value": "" },
-    { "key": "adminUserId", "value": "" },
     { "key": "categoryId", "value": "" },
     { "key": "categorySlug", "value": "" },
     { "key": "productId", "value": "" },
+    { "key": "productId2", "value": "" },
     { "key": "cartId", "value": "" },
     { "key": "cartItemId", "value": "" },
     { "key": "orderId", "value": "" },
+    { "key": "orderId2", "value": "" },
     { "key": "couponId", "value": "" },
-    { "key": "otp", "value": "" }
+    { "key": "userId", "value": "" },
+    { "key": "addressId", "value": "" }
   ],
   "item": [
     {
-      "name": "User",
+      "name": "User Auth",
       "item": [
         {
-          "name": "Register - success",
+          "name": "Register user - success",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/register",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Aa@123456\",\n  \"phone\": \"+201000000000\",\n  \"role\": \"Customer\"\n}"
+              "raw": "{\n  \"name\": \"{{userName}}\",\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\",\n  \"phone\": \"{{userPhone}}\",\n  \"role\": \"Customer\"\n}"
             }
           },
           "event": [{
@@ -41,35 +51,35 @@
             "script": {
               "type": "text/javascript",
               "exec": [
-                "pm.test('201 created', function () { pm.response.to.have.status(201); });",
-                "const json = pm.response.json();",
-                "if (json.token) pm.collectionVariables.set('accessToken', json.token);",
-                "if (json.data && json.data._id) pm.collectionVariables.set('userId', json.data._id);"
+                "pm.test('status 201', function () { pm.response.to.have.status(201); });",
+                "const res = pm.response.json();",
+                "if (res.token) pm.collectionVariables.set('accessToken', res.token);",
+                "if (res.data && res.data._id) pm.collectionVariables.set('userId', res.data._id);"
               ]
             }
           }]
         },
         {
-          "name": "Register - validation error (weak password)",
+          "name": "Register - weak password (negative)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/register",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"u\",\n  \"email\": \"bad-email\",\n  \"password\": \"123\",\n  \"phone\": \"12\"\n}"
+              "raw": "{\n  \"name\": \"Bad\",\n  \"email\": \"bad-user@example.com\",\n  \"password\": \"123\",\n  \"phone\": \"123\"\n}"
             }
           }
         },
         {
-          "name": "Login - success",
+          "name": "Login user - success",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Aa@123456\",\n  \"sessionId\": \"{{sessionId}}\"\n}"
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\",\n  \"sessionId\": \"{{sessionId}}\"\n}"
             }
           },
           "event": [{
@@ -77,27 +87,49 @@
             "script": {
               "type": "text/javascript",
               "exec": [
-                "pm.test('200 ok', function () { pm.response.to.have.status(200); });",
-                "const json = pm.response.json();",
-                "if (json.data) pm.collectionVariables.set('accessToken', json.data);"
+                "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                "const res = pm.response.json();",
+                "if (res.data) pm.collectionVariables.set('accessToken', res.data);"
               ]
             }
           }]
         },
         {
-          "name": "Login - invalid credentials",
+          "name": "Login user - wrong password (negative)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"WrongPass@123\"\n}"
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"Wrong@123\"\n}"
             }
           }
         },
         {
-          "name": "Verify Email - success",
+          "name": "Login admin - set adminToken",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "const res = pm.response.json();",
+                "if (res.data) pm.collectionVariables.set('adminToken', res.data);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Verify email",
           "request": {
             "method": "POST",
             "header": [
@@ -109,12 +141,12 @@
           }
         },
         {
-          "name": "Verify Email - missing token",
+          "name": "Resend verification",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": "{{baseUrl}}/verify-email",
-            "body": { "mode": "raw", "raw": "{\n  \"otp\": \"123456\"\n}" }
+            "url": "{{baseUrl}}/resend-verification",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{userEmail}}\"\n}" }
           }
         },
         {
@@ -132,6 +164,73 @@
             "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
             "url": "{{baseUrl}}/logout"
           }
+        },
+        {
+          "name": "Forgot password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/forgot-password",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{userEmail}}\"\n}" }
+          }
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/reset-password",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"otp\": \"{{otp}}\",\n  \"newPassword\": \"{{userPassword}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Address",
+      "item": [
+        {
+          "name": "Add address",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/address",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"city\": \"Cairo\",\n  \"street\": \"Nasr City\",\n  \"phone\": \"+201011111111\",\n  \"isDefault\": true\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "const res = pm.response.json();",
+                "if (res.data && res.data.length > 0) {",
+                "  const last = res.data[res.data.length - 1];",
+                "  if (last && last._id) pm.collectionVariables.set('addressId', last._id);",
+                "}"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Set default address",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/address/{{addressId}}/default"
+          }
+        },
+        {
+          "name": "Delete address",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/address/{{addressId}}"
+          }
         }
       ]
     },
@@ -139,7 +238,7 @@
       "name": "Category",
       "item": [
         {
-          "name": "Create category - success",
+          "name": "Create category",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -151,15 +250,15 @@
             "script": {
               "type": "text/javascript",
               "exec": [
-                "const json = pm.response.json();",
-                "if (json.data && json.data._id) pm.collectionVariables.set('categoryId', json.data._id);",
-                "if (json.data && json.data.slug) pm.collectionVariables.set('categorySlug', json.data.slug);"
+                "const res = pm.response.json();",
+                "if (res.data && res.data._id) pm.collectionVariables.set('categoryId', res.data._id);",
+                "if (res.data && res.data.slug) pm.collectionVariables.set('categorySlug', res.data.slug);"
               ]
             }
           }]
         },
         {
-          "name": "Create category - validation error",
+          "name": "Create category - invalid (negative)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -170,6 +269,26 @@
         {
           "name": "Get categories",
           "request": { "method": "GET", "url": "{{baseUrl}}/categories" }
+        },
+        {
+          "name": "Update category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/categories/{{categoryId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Electronics Updated\"\n}" }
+          }
+        },
+        {
+          "name": "Delete category",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/categories/{{categoryId}}"
+          }
         }
       ]
     },
@@ -177,10 +296,13 @@
       "name": "Product",
       "item": [
         {
-          "name": "Create product - success",
+          "name": "Create product 1",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
             "url": "{{baseUrl}}/products",
             "body": {
               "mode": "raw",
@@ -192,17 +314,45 @@
             "script": {
               "type": "text/javascript",
               "exec": [
-                "const json = pm.response.json();",
-                "if (json.data && json.data._id) pm.collectionVariables.set('productId', json.data._id);"
+                "const res = pm.response.json();",
+                "if (res.data && res.data._id) pm.collectionVariables.set('productId', res.data._id);"
               ]
             }
           }]
         },
         {
-          "name": "Create product - validation error",
+          "name": "Create product 2",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/products",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mouse Test\",\n  \"description\": \"Wireless gaming mouse\",\n  \"price\": 80,\n  \"images\": [\"https://example.com/mouse.jpg\"],\n  \"stock\": 50,\n  \"category\": \"{{categoryId}}\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "const res = pm.response.json();",
+                "if (res.data && res.data._id) pm.collectionVariables.set('productId2', res.data._id);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Create product - invalid (negative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
             "url": "{{baseUrl}}/products",
             "body": { "mode": "raw", "raw": "{\n  \"name\": \"A\",\n  \"price\": -1\n}" }
           }
@@ -212,17 +362,27 @@
           "request": { "method": "GET", "url": "{{baseUrl}}/products" }
         },
         {
-          "name": "Get products - with filters",
+          "name": "Get products with filters",
+          "request": { "method": "GET", "url": "{{baseUrl}}/products?keyword=laptop&category={{categorySlug}}&minPrice=100&maxPrice=3000&sort=-price&page=1&limit=10" }
+        },
+        {
+          "name": "Update product",
           "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/products?keyword=laptop&category={{categorySlug}}&minPrice=100&maxPrice=3000&sort=-price&page=1&limit=10"
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/products/{{productId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"price\": 1400\n}" }
           }
         },
         {
-          "name": "Get products - category not found",
+          "name": "Delete product",
           "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/products?category=not-existing-slug"
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/products/{{productId2}}"
           }
         }
       ]
@@ -231,40 +391,40 @@
       "name": "Cart",
       "item": [
         {
-          "name": "Add to cart (guest) - success",
+          "name": "Add to cart guest",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/cart",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 1\n}"
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 1\n}" }
           },
           "event": [{
             "listen": "test",
             "script": {
               "type": "text/javascript",
               "exec": [
-                "const json = pm.response.json();",
-                "if (json.sessionId) pm.collectionVariables.set('sessionId', json.sessionId);",
-                "if (json.data && json.data._id) pm.collectionVariables.set('cartId', json.data._id);",
-                "if (json.data && json.data.items && json.data.items[0] && json.data.items[0]._id) pm.collectionVariables.set('cartItemId', json.data.items[0]._id);"
+                "const res = pm.response.json();",
+                "if (res.sessionId) pm.collectionVariables.set('sessionId', res.sessionId);",
+                "if (res.data && res.data._id) pm.collectionVariables.set('cartId', res.data._id);",
+                "if (res.data && res.data.items && res.data.items[0] && res.data.items[0]._id) pm.collectionVariables.set('cartItemId', res.data.items[0]._id);"
               ]
             }
           }]
         },
         {
-          "name": "Add to cart - validation error",
+          "name": "Add to cart guest second item",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "x-session-id", "value": "{{sessionId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
             "url": "{{baseUrl}}/cart",
-            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"bad-id\",\n  \"quantity\": 0\n}" }
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"{{productId2}}\",\n  \"quantity\": 1\n}" }
           }
         },
         {
-          "name": "Get cart (guest by session)",
+          "name": "Get cart guest",
           "request": {
             "method": "GET",
             "header": [{ "key": "x-session-id", "value": "{{sessionId}}" }],
@@ -272,28 +432,49 @@
           }
         },
         {
-          "name": "Update cart item quantity - success",
+          "name": "Update cart item quantity",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-session-id", "value": "{{sessionId}}" }],
+            "header": [
+              { "key": "x-session-id", "value": "{{sessionId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
             "url": "{{baseUrl}}/cart/items/{{cartItemId}}",
             "body": { "mode": "raw", "raw": "{\n  \"quantity\": 2\n}" }
           }
         },
         {
-          "name": "Update cart item quantity - item not found",
+          "name": "Update cart item - invalid id (negative)",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-session-id", "value": "{{sessionId}}" }],
+            "header": [
+              { "key": "x-session-id", "value": "{{sessionId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
             "url": "{{baseUrl}}/cart/items/507f191e810c19729de860ea",
             "body": { "mode": "raw", "raw": "{\n  \"quantity\": 2\n}" }
           }
         },
         {
-          "name": "Apply coupon - invalid code",
+          "name": "Apply coupon on cart",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-session-id", "value": "{{sessionId}}" }],
+            "header": [
+              { "key": "x-session-id", "value": "{{sessionId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/cart/coupon",
+            "body": { "mode": "raw", "raw": "{\n  \"couponCode\": \"SAVE10\"\n}" }
+          }
+        },
+        {
+          "name": "Apply coupon invalid (negative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "x-session-id", "value": "{{sessionId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
             "url": "{{baseUrl}}/cart/coupon",
             "body": { "mode": "raw", "raw": "{\n  \"couponCode\": \"INVALID\"\n}" }
           }
@@ -311,7 +492,7 @@
           "request": {
             "method": "DELETE",
             "header": [{ "key": "x-session-id", "value": "{{sessionId}}" }],
-            "url": "{{baseUrl}}/cart/items/{{productId}}"
+            "url": "{{baseUrl}}/cart/items/{{productId2}}"
           }
         },
         {
@@ -328,7 +509,7 @@
       "name": "Orders",
       "item": [
         {
-          "name": "Create order - success",
+          "name": "Create order",
           "request": {
             "method": "POST",
             "header": [
@@ -346,14 +527,14 @@
             "script": {
               "type": "text/javascript",
               "exec": [
-                "const json = pm.response.json();",
-                "if (json.data && json.data._id) pm.collectionVariables.set('orderId', json.data._id);"
+                "const res = pm.response.json();",
+                "if (res.data && res.data._id) pm.collectionVariables.set('orderId', res.data._id);"
               ]
             }
           }]
         },
         {
-          "name": "Create order - validation error",
+          "name": "Create order invalid (negative)",
           "request": {
             "method": "POST",
             "header": [
@@ -361,7 +542,10 @@
               { "key": "Content-Type", "value": "application/json" }
             ],
             "url": "{{baseUrl}}/orders",
-            "body": { "mode": "raw", "raw": "{\n  \"cartId\": \"bad-id\",\n  \"paymentMethod\": \"Bitcoin\"\n}" }
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"bad-id\",\n  \"paymentMethod\": \"Bitcoin\"\n}"
+            }
           }
         },
         {
@@ -373,7 +557,7 @@
           }
         },
         {
-          "name": "Get order by id - success",
+          "name": "Get order by id",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
@@ -381,11 +565,11 @@
           }
         },
         {
-          "name": "Get order by id - unauthorized",
+          "name": "Track order",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": "{{baseUrl}}/orders/{{orderId}}"
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/orders/{{orderId}}/track"
           }
         },
         {
@@ -426,14 +610,6 @@
           }
         },
         {
-          "name": "Get user by id - forbidden for non-admin",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
-            "url": "{{baseUrl}}/admin/users/{{userId}}"
-          }
-        },
-        {
           "name": "Update user role",
           "request": {
             "method": "PUT",
@@ -443,18 +619,6 @@
             ],
             "url": "{{baseUrl}}/admin/users/{{userId}}/role",
             "body": { "mode": "raw", "raw": "{\n  \"role\": \"Seller\"\n}" }
-          }
-        },
-        {
-          "name": "Update user role - invalid role",
-          "request": {
-            "method": "PUT",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": "{{baseUrl}}/admin/users/{{userId}}/role",
-            "body": { "mode": "raw", "raw": "{\n  \"role\": \"Manager\"\n}" }
           }
         },
         {
@@ -474,7 +638,7 @@
           }
         },
         {
-          "name": "Get order by id",
+          "name": "Get admin order by id",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
@@ -494,18 +658,6 @@
           }
         },
         {
-          "name": "Update order status - invalid status",
-          "request": {
-            "method": "PUT",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": "{{baseUrl}}/admin/orders/{{orderId}}/status",
-            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Unknown\"\n}" }
-          }
-        },
-        {
           "name": "Delete order",
           "request": {
             "method": "DELETE",
@@ -520,7 +672,12 @@
             "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
             "url": "{{baseUrl}}/admin/dashboard-stats"
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Admin Coupons",
+      "item": [
         {
           "name": "Create coupon",
           "request": {
@@ -540,14 +697,14 @@
             "script": {
               "type": "text/javascript",
               "exec": [
-                "const json = pm.response.json();",
-                "if (json.data && json.data._id) pm.collectionVariables.set('couponId', json.data._id);"
+                "const res = pm.response.json();",
+                "if (res.data && res.data._id) pm.collectionVariables.set('couponId', res.data._id);"
               ]
             }
           }]
         },
         {
-          "name": "Create coupon - invalid percentage",
+          "name": "Create coupon invalid percentage (negative)",
           "request": {
             "method": "POST",
             "header": [
@@ -603,10 +760,10 @@
       ]
     },
     {
-      "name": "Stripe Webhook",
+      "name": "Webhook",
       "item": [
         {
-          "name": "Webhook - missing signature (negative)",
+          "name": "Stripe webhook missing signature (negative)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],

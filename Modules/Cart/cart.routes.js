@@ -8,7 +8,7 @@ import {
   applyCoupon,
   removeCoupon,
 } from "./cart.controller.js";
-import { verifyToken, optionalAuth } from "../../Middlewares/verifyToken.js";
+import { optionalAuth } from "../../Middlewares/verifyToken.js";
 import { validate } from "../../Middlewares/validate.js";
 import {
   addToCartValidation,
@@ -55,3 +55,4 @@ cartRoutes.post(
 cartRoutes.delete("/cart/coupon", optionalAuth, removeCoupon);
 
 export default cartRoutes;
+
