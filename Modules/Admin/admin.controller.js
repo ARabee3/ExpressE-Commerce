@@ -255,7 +255,11 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
 
 // seller data
 const getAllSellers = catchAsync(async(req,res,next)=>{
-    const sellers = await userModel.find({ role: "Seller", isDeleted: false }).select("-password");
+  const limit = parseInt(req.query.limit) || 10;
+  const page = parseInt(req.query.page) || 1;
+
+  const skip = limit * (page - 1);
+    const sellers = await userModel.find({ role: "Seller", isDeleted: false }).select("-password").limit(limit).skip(skip);
     res.status(200).json({
         message:"sellers data",
         data:sellers
