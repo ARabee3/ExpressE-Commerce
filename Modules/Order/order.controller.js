@@ -240,10 +240,26 @@ const updatePaidStatus = catchAsync(async (req, res, next) => {
   if (updatedOrder.cartId) {
     await cartModel.findByIdAndDelete(updatedOrder.cartId);
   }
-
   res.status(200).json({
     message: "order paid status updated",
     data: updatedOrder,
+  });
+});
+
+// track order status
+const trackOrder = catchAsync(async (req, res, next) => {
+  const orderId = req.params.id;
+  const order = await orderModel.findById(orderId);
+
+  res.status(200).json({
+    message: "order status",
+    data: {
+      status: order.status,
+      processedAt: order.processedAt,
+      shippedAt: order.shippedAt,
+      deliveredAt: order.deliveredAt,
+      cancelledAt: order.cancelledAt,
+    },
   });
 });
 
@@ -348,4 +364,5 @@ export {
   updatePaidStatus,
   createPaymentIntent,
   stripeWebhook,
+  trackOrder,
 };

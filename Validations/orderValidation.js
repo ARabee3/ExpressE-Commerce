@@ -36,7 +36,7 @@ export const orderValidation = joi.object({
     .required()
     .messages({
       "string.empty": "Payment can't be empty",
-      "ant.only": "Payment method must be one of card , cash and wallet",
+      "any.only": "Payment method must be one of card , cash and wallet",
     }),
   status: joi
     .string()

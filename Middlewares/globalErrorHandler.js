@@ -1,4 +1,5 @@
 import { AppError } from "../Utils/Error/AppError.js";
+import "dotenv/config";
 
 export const globalErrorHandler = (err, req, res, next) => {
   if (err.code === 11000) {
@@ -11,6 +12,6 @@ export const globalErrorHandler = (err, req, res, next) => {
     message: "Error",
     error: err.message,
     // for development
-    stack: err.stack,
+    ...(process.env.ENVIRONMENT === "development" && { stack: err.stack }),
   });
 };

@@ -1,5 +1,4 @@
 import express from "express";
-import { validateData } from "../../Middlewares/validationDate.js";
 import { orderModel } from "../../Database/Models/order.model.js";
 import { orderValidation } from "../../Validations/orderValidation.js";
 import { isAuthor } from "../../Middlewares/isAuthor.js";
@@ -12,7 +11,9 @@ import {
   cancelOrder,
   updatePaidStatus,
   createPaymentIntent,
+  trackOrder,
 } from "./order.controller.js";
+import { validate } from "../../Middlewares/validate.js";
 
 const orderRoutes = express.Router();
 
@@ -26,11 +27,27 @@ orderRoutes.get(
 orderRoutes.post(
   "/orders",
   verifyToken,
-  validateData(orderValidation),
+  validate(orderValidation),
   isAuthor(cartModel, "cart"),
   addOrder,
 );
-orderRoutes.put("/orders/:id/cancel", verifyToken, cancelOrder);
+orderRoutes.put(
+  "/orders/:id/cancel",
+  verifyToken,
+  isAuthor(orderModel, "order"),
+  cancelOrder,
+);
 orderRoutes.post("/orders/:id/pay-intent", verifyToken, createPaymentIntent);
-orderRoutes.put("/orders/:id/pay", verifyToken, updatePaidStatus);
+orderRoutes.put(
+  "/orders/:id/pay",
+  verifyToken,
+  isAuthor(orderModel, "order"),
+  updatePaidStatus,
+);
+orderRoutes.get(
+  "/orders/:id/track",
+  verifyToken,
+  isAuthor(orderModel, "order"),
+  trackOrder,
+);
 export default orderRoutes;
