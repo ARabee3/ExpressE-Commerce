@@ -252,6 +252,92 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
   });
 });
 
+
+// seller data
+const getAllSellers = catchAsync(async(req,res,next)=>{
+    const sellers = await userModel.find({ role: "Seller", isDeleted: false }).select("-password");
+    res.status(200).json({
+        message:"sellers data",
+        data:sellers
+    })
+})
+
+const approveSeller = catchAsync(async(req,res,next)=>{
+    const sellerId = req.params.id;
+    const seller = await userModel.findById(sellerId);
+
+    if(!seller)
+    {
+        return next(new AppError("Seller not found",404));
+    }
+    if(seller.role !== "Seller")
+    {
+        return next(new AppError("User is not a seller",400));
+    }
+    if(seller.isApproved)
+    {
+        return next(new AppError("Seller is already approved",400));
+    }
+
+    seller.isApproved = true;
+    await seller.save();
+
+    res.status(200).json({
+        message:"Seller approved successfully",
+        data:seller
+    })
+})
+
+const suspendSeller = catchAsync(async(req,res,next)=>{
+    const sellerId = req.params.id;
+    const seller = await userModel.findById(sellerId);
+
+    if(!seller)
+    {
+        return next(new AppError("Seller not found",404));
+    }
+    if(seller.role !== "Seller")
+    {
+        return next(new AppError("User is not a seller",400));
+    }
+    if(!seller.isActive)
+    {
+        return next(new AppError("Seller is already suspended",400));
+    }
+
+    seller.isActive = false;
+    await seller.save();
+
+    res.status(200).json({
+        message:"Seller suspended successfully",
+        data:seller
+    })
+})
+const reactiveSeller = catchAsync(async(req,res,next)=>{
+    const sellerId = req.params.id;
+    const seller = await userModel.findById(sellerId);
+
+    if(!seller)
+    {
+        return next(new AppError("Seller not found",404));
+    }
+    if(seller.role !== "Seller")
+    {
+        return next(new AppError("User is not a seller",400));
+    }
+    if(seller.isActive)
+    {
+        return next(new AppError("Seller is already active",400));
+    }
+
+    seller.isActive = true;
+    await seller.save();
+
+    res.status(200).json({
+        message:"Seller reactivated successfully",
+        data:seller
+    })
+})
 export {
   getUserById,
   deleteUser,
@@ -261,4 +347,8 @@ export {
   updateOrderStatus,
   deleteOrder,
   getDashboardStats,
+  getAllSellers,
+  approveSeller,
+  suspendSeller,
+  reactiveSeller
 };

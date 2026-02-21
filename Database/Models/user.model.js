@@ -30,10 +30,23 @@ const userSchema = new Schema(
       enum: ["Customer", "Admin", "Seller"],
       default: "Customer",
     },
-    isVerified: {
+      isVerified: {
       type: Boolean,
       default: false,
     },
+    //for sellers
+     storeName: {
+      type: String,
+     },
+    isApproved: {
+      type: Boolean,
+      default: false,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    //for all
     isDeleted: {
       type: Boolean,
       default: false,
