@@ -4,7 +4,8 @@ import { catchAsync } from "../../Utils/Error/catchAsync.js";
 import slugify from "slugify";
 //create product
 export const createProduct = catchAsync(async (req, res, next) => {
-  const product = await productModel.insertOne(req.body);
+  req.body.sellerId = req.user._id;
+  const product = await productModel.create(req.body);
 
   res.status(201).json({
     status: "success",

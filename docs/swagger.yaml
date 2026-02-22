@@ -307,6 +307,41 @@ components:
         type: string
 
 paths:
+  # ── Health Check ───────────────────────────────────────
+  /health:
+    get:
+      tags: [Auth]
+      summary: Health check
+      description: Returns the connectivity status of MongoDB and Redis. Returns 503 if any service is down.
+      responses:
+        "200":
+          description: All services healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  uptime:
+                    type: integer
+                    example: 3600
+                  timestamp:
+                    type: string
+                    format: date-time
+                  services:
+                    type: object
+                    properties:
+                      mongodb:
+                        type: string
+                        example: connected
+                      redis:
+                        type: string
+                        example: connected
+        "503":
+          description: One or more services are down
+
   # ── Auth ──────────────────────────────────────────────
   /register:
     post:
