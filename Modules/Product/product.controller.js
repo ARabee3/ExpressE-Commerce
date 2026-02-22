@@ -34,7 +34,7 @@ export const getProducts = catchAsync(async (req, res, next) => {
     const foundCategory = await categoryModel.findOne({ slug: category });
 
     if (!foundCategory) {
-      return res.status(404).json({ message: "Category not found" });
+      return next(new AppError("Category not found ", 404));
     }
     filter.category = foundCategory._id;
   }
@@ -107,7 +107,7 @@ export const updateProduct = catchAsync(async (req, res, next) => {
   });
 
   if (!updatedProduct) {
-    return res.status(404).json({ message: "Product not found" });
+    return next(new AppError("Product not found ", 404));
   }
 
   res.status(200).json({
@@ -123,7 +123,7 @@ export const deleteProduct = catchAsync(async (req, res, next) => {
   const deletedProduct = await productModel.findByIdAndDelete(id);
 
   if (!deletedProduct) {
-    return res.status(404).json({ message: "Product not found" });
+    return next(new AppError("Product not found ", 404));
   }
 
   res.status(200).json({
