@@ -1,4 +1,5 @@
 import { userModel } from "../../Database/Models/user.model.js";
+import { productModel } from "../../Database/Models/product.model.js";
 import { AppError } from "../../Utils/Error/AppError.js";
 import { catchAsync } from "../../Utils/Error/catchAsync.js";
 import bcrypt from "bcrypt";
@@ -261,6 +262,107 @@ const resetPassword = catchAsync(async (req, res, next) => {
   });
 });
 
+const changePassword = catchAsync(async (req, res, next) => {
+  const { currentPassword, newPassword } = req.body;
+
+  const user = await userModel.findById(req.user._id).select("+password");
+  if (!user) return next(new AppError("User not found", 404));
+
+  const isMatch = await bcrypt.compare(currentPassword, user.password);
+  if (!isMatch) {
+    return next(new AppError("Current password is incorrect", 401));
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Password changed successfully",
+  });
+});
+
+const getProfile = catchAsync(async (req, res, next) => {
+  const user = await userModel
+    .findById(req.user._id)
+    .populate("wishlist", "name price images");
+
+  if (!user) return next(new AppError("User not found", 404));
+
+  res.status(200).json({
+    success: true,
+    data: user,
+  });
+});
+
+const updateProfile = catchAsync(async (req, res, next) => {
+  const allowedFields = ["name", "phone"];
+  const updates = {};
+  for (const key of allowedFields) {
+    if (req.body[key] !== undefined) {
+      updates[key] = req.body[key];
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return next(new AppError("No valid fields to update", 400));
+  }
+
+  const user = await userModel.findByIdAndUpdate(req.user._id, updates, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!user) return next(new AppError("User not found", 404));
+
+  res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    data: user,
+  });
+});
+
+const addToWishlist = catchAsync(async (req, res, next) => {
+  const { productId } = req.params;
+
+  const product = await productModel.findById(productId);
+  if (!product) return next(new AppError("Product not found", 404));
+
+  const user = await userModel
+    .findByIdAndUpdate(
+      req.user._id,
+      { $addToSet: { wishlist: productId } },
+      { new: true },
+    )
+    .populate("wishlist", "name price images");
+
+  res.status(200).json({
+    success: true,
+    message: "Product added to wishlist",
+    data: user.wishlist,
+  });
+});
+
+const removeFromWishlist = catchAsync(async (req, res, next) => {
+  const { productId } = req.params;
+
+  const user = await userModel
+    .findByIdAndUpdate(
+      req.user._id,
+      { $pull: { wishlist: productId } },
+      { new: true },
+    )
+    .populate("wishlist", "name price images");
+
+  if (!user) return next(new AppError("User not found", 404));
+
+  res.status(200).json({
+    success: true,
+    message: "Product removed from wishlist",
+    data: user.wishlist,
+  });
+});
+
 export {
   register,
   login,
@@ -273,4 +375,9 @@ export {
   setDefaultAddress,
   forgotPassword,
   resetPassword,
+  changePassword,
+  getProfile,
+  updateProfile,
+  addToWishlist,
+  removeFromWishlist,
 };
