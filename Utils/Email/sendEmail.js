@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import "dotenv/config";
 import otpGenerator from "otp-generator";
 import { redisClient } from "../../Database/redisConnection.js";
+import logger from "../logger.js";
 
 export const sendEmail = async (user, subject, messageType) => {
   const transporter = nodemailer.createTransport({
@@ -44,7 +45,7 @@ export const sendEmail = async (user, subject, messageType) => {
     await transporter.sendMail(mailOptions);
     return true;
   } catch (error) {
-    console.error("Error sending email:", error);
+    logger.error({ err: error, email: user.email }, "Failed to send email");
     return false;
   }
 };
