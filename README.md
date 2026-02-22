@@ -30,7 +30,7 @@ A full-featured RESTful E-Commerce API built with **Express.js**, **MongoDB**, a
 | Payments | Stripe |
 | Email | Nodemailer (Gmail) |
 | Validation | Joi |
-| Security | Helmet, CORS, express-mongo-sanitize |
+| Security | Helmet, CORS, Custom NoSQL Injection Protection |
 | Logging | Pino |
 | Testing | Vitest + Supertest |
 | Docs | Swagger UI (OpenAPI 3.0) |
