@@ -37,7 +37,7 @@ export const updateCategory = catchAsync(async (req, res, next) => {
   });
 
   if (!updatedCategory) {
-    return res.status(404).json({ message: "Category not found" });
+    return next(new AppError("Category not found ", 404));
   }
 
   res.status(200).json({
@@ -61,7 +61,7 @@ export const deleteCategory = catchAsync(async (req, res, next) => {
   const deletedCategory = await categoryModel.findByIdAndDelete(id);
 
   if (!deletedCategory) {
-    return res.status(404).json({ message: "Category not found" });
+    return next(new AppError("Category not found ", 404));
   }
 
   res.status(200).json({
