@@ -45,7 +45,8 @@ const login = catchAsync(async (req, res, next) => {
     const refreshToken = foundUser.generateRefreshToken();
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      //secure: true,
+      secure: true,
+      sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 

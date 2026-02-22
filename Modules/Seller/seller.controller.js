@@ -5,7 +5,16 @@ import { catchAsync } from "../../Utils/Error/catchAsync.js";
 
 const getMyProducts = catchAsync(async(req,res,next)=>{
     const seller_id = req.user._id;
-    const products = await productModel.find({ sellerId: seller_id });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const filter = { sellerId: seller_id };
+
+    const [products, totalProducts] = await Promise.all([
+      productModel.find(filter).skip(skip).limit(limit),
+      productModel.countDocuments(filter),
+    ]);
     
     if(!products || products.length === 0)
     {
@@ -13,7 +22,10 @@ const getMyProducts = catchAsync(async(req,res,next)=>{
     }
     res.status(200).json({
         message:"Products of this seller",
-        data:products
+        data:products,
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts,
     })
 })
 

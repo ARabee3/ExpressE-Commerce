@@ -1,9 +1,13 @@
 import mongoose from "mongoose";
 import "dotenv/config";
+import logger from "../Utils/logger.js";
 
 export const dbConnection = () => {
   mongoose
     .connect(process.env.MONGODB_URI)
-    .then(() => console.log("Connected To Database"))
-    .catch((err) => console.log(err));
+    .then(() => logger.info("Connected to Database"))
+    .catch((err) => {
+      logger.fatal({ err }, "Database connection failed");
+      process.exit(1);
+    });
 };

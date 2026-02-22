@@ -5,20 +5,35 @@ import { productModel } from "../../Database/Models/product.model.js";
 import { cartModel } from "../../Database/Models/cart.model.js";
 import { couponModel } from "../../Database/Models/coupon.model.js";
 import Stripe from "stripe";
+import logger from "../../Utils/logger.js";
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
 const getUserOrders = catchAsync(async (req, res, next) => {
-  const orders = await orderModel
-    .find({ userId: req.user._id })
-    .populate("orderItems.productId", "title price images")
-    .sort({ createdAt: -1 });
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const filter = { userId: req.user._id };
+
+  const [orders, totalOrders] = await Promise.all([
+    orderModel
+      .find(filter)
+      .populate("orderItems.productId", "title price images")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    orderModel.countDocuments(filter),
+  ]);
 
   res.status(200).json({
     message: "Orders of this user",
     data: orders,
+    currentPage: page,
+    totalPages: Math.ceil(totalOrders / limit),
+    totalOrders,
   });
 });
 
@@ -132,11 +147,30 @@ const addOrder = catchAsync(async (req, res, next) => {
     couponId,
   });
 
-  // Update stock
+  // Atomically update stock — the filter ensures stock doesn't go negative
   for (const item of orderItems) {
-    await productModel.findByIdAndUpdate(item.productId, {
-      $inc: { stock: -item.quantity },
-    });
+    const result = await productModel.findOneAndUpdate(
+      { _id: item.productId, stock: { $gte: item.quantity } },
+      { $inc: { stock: -item.quantity } },
+      { new: true },
+    );
+    if (!result) {
+      // Rollback already decremented stock for previous items
+      for (const prev of orderItems) {
+        if (prev.productId.toString() === item.productId.toString()) break;
+        await productModel.findByIdAndUpdate(prev.productId, {
+          $inc: { stock: prev.quantity },
+        });
+      }
+      // Delete the just-created order
+      await orderModel.findByIdAndDelete(order._id);
+      return next(
+        new AppError(
+          `Insufficient stock for product "${item.productTitle}". Please try again.`,
+          409,
+        ),
+      );
+    }
   }
 
   // Soft delete the cart after successful order
@@ -185,10 +219,17 @@ const cancelOrder = catchAsync(async (req, res, next) => {
     },
   );
 
-  // loop on item to edit  stock
+  // Restore stock for each item
   for (const item of order.orderItems) {
     await productModel.findByIdAndUpdate(item.productId, {
       $inc: { stock: item.quantity },
+    });
+  }
+
+  // Rollback coupon usage count
+  if (order.couponId) {
+    await couponModel.findByIdAndUpdate(order.couponId, {
+      $inc: { usedCount: -1 },
     });
   }
 

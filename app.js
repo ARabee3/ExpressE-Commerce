@@ -1,4 +1,5 @@
 import express from "express";
+import logger from "./Utils/logger.js";
 import "dotenv/config";
 import { dbConnection } from "./Database/dbConnection.js";
 import { redisConnection } from "./Database/redisConnection.js";
@@ -25,9 +26,16 @@ import cartRoutes from "./Modules/Cart/cart.routes.js";
 import helmet from "helmet";
 import { globalLimiter, initLimiters } from "./Middlewares/rateLimiter.js";
 import sellerRoutes from "./Modules/Seller/seller.routes.js";
+import swaggerUi from "swagger-ui-express";
+import swaggerDocument from "./docs/swaggerConfig.js";
 dbConnection();
-await redisConnection();
-initLimiters();
+try {
+  await redisConnection();
+  initLimiters();
+} catch (err) {
+  logger.fatal({ err }, "Redis connection failed — cannot start without rate limiting");
+  process.exit(1);
+}
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -41,6 +49,11 @@ app.use(cookieParser());
 
 app.set("trust proxy", 1);
 app.use(globalLimiter);
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+  customSiteTitle: "Express E-Commerce API Docs",
+  customCss: ".swagger-ui .topbar { display: none }",
+}));
 
 orderModel;
 categoryModel;
@@ -64,5 +77,5 @@ app.use((req, res, next) => {
 app.use(globalErrorHandler);
 
 app.listen(port, () => {
-  console.log(`Server is running successfully at port ${port}`);
+  logger.info(`Server is running successfully at port ${port}`);
 });

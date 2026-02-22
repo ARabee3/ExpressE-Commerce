@@ -42,10 +42,10 @@ export const userValidation = joi.object({
     }),
   role: joi
     .string()
-    .valid("Customer", "Admin", "Seller")
+    .valid("Customer", "Seller")
     .insensitive()
     .messages({
-      "any.only": "Role must be one of (Customer, Admin, Seller)",
+      "any.only": "Role must be one of (Customer, Seller)",
     }),
   addresses: joi.array().items(
     joi.object({
