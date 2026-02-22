@@ -5,6 +5,8 @@ import { redisConnection } from "./Database/redisConnection.js";
 import { globalErrorHandler } from "./Middlewares/globalErrorHandler.js";
 import { productModel } from "./Database/Models/product.model.js";
 import productsRoutes from "./Modules/Product/product.routes.js";
+import { reviewModel } from "./Database/Models/review.model.js";
+import reviewRoutes from "./Modules/Review/review.routes.js"
 import { orderModel } from "./Database/Models/order.model.js";
 import orderRoutes from "./Modules/Order/order.routes.js";
 import { stripeWebhook } from "./Modules/Order/order.controller.js";
@@ -43,12 +45,14 @@ app.use(globalLimiter);
 orderModel;
 categoryModel;
 productModel;
+reviewModel;
 cartModel;
 couponModel;
 
 app.use(userRoutes);
 app.use(categoryRoutes);
 app.use(productsRoutes);
+app.use(reviewRoutes);
 app.use(cartRoutes);
 app.use(orderRoutes);
 app.use("/admin", adminRouter);
