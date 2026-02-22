@@ -19,7 +19,7 @@ const verifyToken = async (req, res, next) => {
         success: false,
         message: "User is deleted or banned.",
       });
-    req.user = decoded;
+    req.user = user;
 
     next();
   } catch (err) {

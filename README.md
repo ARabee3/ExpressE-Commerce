@@ -8,13 +8,15 @@ A full-featured RESTful E-Commerce API built with **Express.js**, **MongoDB**, a
 - **Role-Based Access** — Customer, Seller, Admin with middleware guards
 - **Product Management** — CRUD, search, filtering, pagination, category support
 - **Shopping Cart** — Guest & authenticated carts, coupon support, cart merge on login
-- **Order System** — Place orders, track status, cancel with stock rollback
+- **Order System** — Place orders, track status, cancel with atomic stock rollback
 - **Payments** — Stripe integration with webhook verification
 - **Reviews** — Star ratings with automatic product average calculation
 - **Admin Panel** — Dashboard stats, user/order/coupon/seller management
 - **Seller System** — Register as seller, admin approval, product management
-- **Security** — Helmet, CORS, rate limiting (Redis-backed), input validation (Joi)
+- **Security** — Helmet, CORS, rate limiting (Redis-backed), input validation (Joi), NoSQL injection protection, HTTPS enforcement
 - **Structured Logging** — Pino with pretty-print in dev, JSON in production
+- **Health Check** — `GET /health` with MongoDB + Redis status monitoring
+- **Testing** — 36 integration tests with Vitest + Supertest
 
 ## 🏗️ Tech Stack
 
@@ -28,7 +30,9 @@ A full-featured RESTful E-Commerce API built with **Express.js**, **MongoDB**, a
 | Payments | Stripe |
 | Email | Nodemailer (Gmail) |
 | Validation | Joi |
+| Security | Helmet, CORS, express-mongo-sanitize |
 | Logging | Pino |
+| Testing | Vitest + Supertest |
 | Docs | Swagger UI (OpenAPI 3.0) |
 
 ## 📋 Prerequisites
@@ -106,7 +110,8 @@ You can test all endpoints directly from the browser. Click **Authorize** 🔓 a
 ## 📁 Project Structure
 
 ```
-├── app.js                     # Entry point
+├── app.js                     # Entry point (connects DB/Redis, starts server)
+├── createApp.js               # Express app factory (testable)
 ├── Database/
 │   ├── Models/                # Mongoose models (7 models)
 │   ├── dbConnection.js        # MongoDB connection
@@ -114,6 +119,7 @@ You can test all endpoints directly from the browser. Click **Authorize** 🔓 a
 ├── Middlewares/
 │   ├── globalErrorHandler.js  # Central error handler
 │   ├── rateLimiter.js         # Redis-backed rate limiting
+│   ├── enforceHttps.js        # HTTPS redirect (production)
 │   ├── validate.js            # Joi validation middleware
 │   ├── verifyToken.js         # JWT authentication
 │   ├── isAdmin.js             # Admin guard
@@ -136,6 +142,14 @@ You can test all endpoints directly from the browser. Click **Authorize** 🔓 a
 │   ├── Events/                # EventEmitter for async emails
 │   ├── logger.js              # Pino logger configuration
 │   └── hashPassword.js        # bcrypt pre-save hook
+├── tests/
+│   ├── setup.js               # DB/Redis connect + teardown
+│   ├── helpers.js             # Test factories & supertest instance
+│   ├── health.test.js         # Health check tests
+│   ├── auth.test.js           # Auth flow tests (13)
+│   ├── product.test.js        # Product CRUD tests (8)
+│   ├── cart.test.js           # Cart operation tests (7)
+│   └── order.test.js          # Order lifecycle tests (7)
 └── docs/
     ├── swagger.yaml           # OpenAPI 3.0 specification
     └── swaggerConfig.js       # Swagger UI loader
@@ -181,7 +195,26 @@ Track Order → Receive status emails
 |---|---|---|
 | dev | `npm run dev` | Start with nodemon (auto-restart) |
 | start | `npm start` | Start for production |
-| test | `npm test` | Run tests (not yet configured) |
+| test | `npm test` | Run all 36 tests |
+| test:watch | `npm run test:watch` | Run tests in watch mode |
+
+## 🧪 Testing
+
+The project includes **36 integration tests** across 5 test suites:
+
+```bash
+npm test
+```
+
+| Suite | Tests | Covers |
+|---|:---:|---|
+| `health.test.js` | 1 | Health check endpoint |
+| `auth.test.js` | 13 | Register, login, OTP verify, profile, password |
+| `product.test.js` | 8 | Create, list, filter, update, delete |
+| `cart.test.js` | 7 | Add, get, update, remove, guest, stock |
+| `order.test.js` | 7 | Place, list, get, track, cancel, stock rollback |
+
+Tests use a separate `_test` database that is automatically dropped after the suite completes.
 
 ## 👨‍💻 Authors
 
