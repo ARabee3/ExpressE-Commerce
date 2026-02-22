@@ -38,6 +38,9 @@ const registerAsSeller = catchAsync(async(req,res,next)=>{
     {
         return next(new AppError("You are already a seller",400));
     }
+      if (user.role === "Admin") {
+        return next(new AppError("You are admin can't be a seller", 400));
+      }
     user.role = "Seller";
     user.storeName = req.body.storeName;
     await user.save();
