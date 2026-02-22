@@ -120,6 +120,7 @@ You can test all endpoints directly from the browser. Click **Authorize** 🔓 a
 │   ├── globalErrorHandler.js  # Central error handler
 │   ├── rateLimiter.js         # Redis-backed rate limiting
 │   ├── enforceHttps.js        # HTTPS redirect (production)
+│   ├── sanitizeNoSQL.js       # NoSQL injection protection
 │   ├── validate.js            # Joi validation middleware
 │   ├── verifyToken.js         # JWT authentication
 │   ├── isAdmin.js             # Admin guard
