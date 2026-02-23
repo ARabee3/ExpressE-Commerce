@@ -16,7 +16,7 @@ const categorySchema = new Schema(
             lowercase: true
         }
     },
-    {timestamps: true}
+    {timestamps: true,versionKey: false}
 );
 
 //using slug for URL-friendly version of name

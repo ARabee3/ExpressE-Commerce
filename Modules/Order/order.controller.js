@@ -4,6 +4,7 @@ import { AppError } from "../../Utils/Error/AppError.js";
 import { productModel } from "../../Database/Models/product.model.js";
 import { cartModel } from "../../Database/Models/cart.model.js";
 import { couponModel } from "../../Database/Models/coupon.model.js";
+import { userModel } from "../../Database/Models/user.model.js";
 import Stripe from "stripe";
 import logger from "../../Utils/logger.js";
 
@@ -54,7 +55,28 @@ const getOrderById = catchAsync(async (req, res, next) => {
 
 const addOrder = catchAsync(async (req, res, next) => {
   const userId = req.user._id;
-  const { cartId, shippingAddress, paymentMethod } = req.body;
+  const { cartId, addressId, shippingAddress, paymentMethod } = req.body;
+
+  // Resolve shipping address: either from saved address or manually provided
+  let resolvedAddress;
+
+  if (addressId) {
+    const user = await userModel.findById(userId);
+    const savedAddress = user?.addresses?.id(addressId);
+    if (!savedAddress) {
+      return next(new AppError("Address not found in your saved addresses", 404));
+    }
+    resolvedAddress = {
+      street: savedAddress.street,
+      city: savedAddress.city,
+      state: savedAddress.state,
+      phone: savedAddress.phone,
+    };
+  } else if (shippingAddress) {
+    resolvedAddress = shippingAddress;
+  } else {
+    return next(new AppError("Either addressId or shippingAddress is required", 400));
+  }
 
   // Find cart and validate
   const cart = await cartModel.findById(cartId).populate("items.productId");
@@ -138,7 +160,7 @@ const addOrder = catchAsync(async (req, res, next) => {
   const order = await orderModel.create({
     userId,
     cartId,
-    shippingAddress,
+    shippingAddress: resolvedAddress,
     orderItems,
     totalOrderPrice,
     discountAmount,

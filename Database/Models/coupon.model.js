@@ -38,7 +38,7 @@ const couponSchema = new Schema(
       default: true,
     },
   },
-  { timestamps: true },
+  { timestamps: true,versionKey: false },
 );
 
 // Compound index for fast lookups
