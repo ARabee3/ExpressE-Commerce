@@ -112,7 +112,10 @@ You can test all endpoints directly from the browser. Click **Authorize** 🔓 a
 ```
 ├── app.js                     # Entry point (connects DB/Redis, starts server)
 ├── createApp.js               # Express app factory (testable)
+├── vercel.json                # Vercel deployment config
 ├── .env.example               # Environment variable template
+├── api/
+│   └── index.js               # Vercel serverless adapter
 ├── Database/
 │   ├── Models/                # Mongoose models (7 models)
 │   ├── dbConnection.js        # MongoDB connection
@@ -218,40 +221,41 @@ npm test
 
 Tests use a separate `_test` database that is automatically dropped after the suite completes.
 
-## 🚀 Deployment (Railway)
+## 🚀 Deployment (Vercel)
 
-The API is deployed on [Railway](https://railway.app) — $5 free trial credit, no credit card required.
+The API is deployed on [Vercel](https://vercel.com) — free tier, no credit card required.
 
-Railway auto-detects Node.js from `package.json` and runs `npm start`.
+A serverless adapter (`api/index.js`) wraps the Express app for Vercel's serverless runtime. The original `app.js` entry point is **not modified** — local development works exactly the same.
 
 ### Quick Deploy
 
 1. Push the repo to GitHub
-2. Sign up at [railway.app](https://railway.app) with GitHub (no credit card needed)
-3. Click **New Project** → **Deploy from GitHub repo** → select `ARabee3/ExpressE-Commerce`
-4. Set the **branch** to your deployment branch (e.g. `feat/user` or `master`)
-5. Go to your service → **Variables** tab → add the following (see [`.env.example`](.env.example)):
+2. Sign up at [vercel.com](https://vercel.com) with GitHub (no credit card needed)
+3. Click **Add New** → **Project** → import `ARabee3/ExpressE-Commerce`
+4. Set **Root Directory** to `./` and **Framework Preset** to `Other`
+5. Add environment variables (see [`.env.example`](.env.example)):
 
    | Variable | Value |
    |---|---|
    | `ENVIRONMENT` | `production` |
-   | `PORT` | `3000` |
    | `MONGODB_URI` | Your MongoDB Atlas connection string |
    | `REDIS_URL` | Your Upstash Redis URL (`rediss://...`) |
    | `SECRETKEY` | Your JWT access token secret |
    | `REFRESH_TOKEN_SECRET` | Your JWT refresh token secret |
    | `EMAIL` | Your Gmail address |
    | `GOOGLE_APP_PASSWORD` | Your Gmail app password |
-   | `BASE_URL` | Your Railway URL (e.g. `https://expressecommerce-production.up.railway.app`) |
+   | `BASE_URL` | Your Vercel URL (set after first deploy) |
 
-6. Go to **Settings** → **Networking** → click **Generate Domain** to get a public URL
-7. Verify at `https://<your-domain>.up.railway.app/health`
+6. Click **Deploy**
+7. Verify at `https://<your-app>.vercel.app/health`
+
+> **Note:** After the first deploy, copy your Vercel URL and set it as the `BASE_URL` environment variable.
 
 ### What's pre-configured
 
-- ✅ HTTPS enforcement (auto-redirects HTTP in production)
+- ✅ HTTPS (automatic on Vercel)
 - ✅ Health check endpoint at `/health` (MongoDB + Redis status)
-- ✅ Redis-backed rate limiting
+- ✅ Redis-backed rate limiting (graceful fallback if unavailable)
 - ✅ Helmet security headers
 - ✅ Swagger API docs at `/api-docs`
 
