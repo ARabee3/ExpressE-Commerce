@@ -101,6 +101,8 @@ components:
           type: string
         street:
           type: string
+        state:
+          type: string
         phone:
           type: string
         isDefault:
@@ -893,7 +895,7 @@ paths:
                       $ref: "#/components/schemas/Category"
     post:
       tags: [Categories]
-      summary: Create a category (Seller)
+      summary: Create a category (Admin)
       security:
         - bearerAuth: []
       requestBody:
@@ -914,7 +916,7 @@ paths:
   /categories/{id}:
     put:
       tags: [Categories]
-      summary: Update a category (Seller)
+      summary: Update a category (Admin)
       security:
         - bearerAuth: []
       parameters:
@@ -933,7 +935,7 @@ paths:
           description: Category updated
     delete:
       tags: [Categories]
-      summary: Delete a category (Seller)
+      summary: Delete a category (Admin)
       description: Cannot delete a category that has products
       security:
         - bearerAuth: []
@@ -1124,6 +1126,8 @@ paths:
     post:
       tags: [Orders]
       summary: Place an order from cart
+      description: |
+        Provide either `addressId` (pick a saved address from your profile) or `shippingAddress` (enter manually). Not both.
       security:
         - bearerAuth: []
       requestBody:
@@ -1132,19 +1136,25 @@ paths:
           application/json:
             schema:
               type: object
-              required: [cartId, shippingAddress, paymentMethod]
+              required: [cartId, paymentMethod]
               properties:
                 cartId:
                   type: string
+                addressId:
+                  type: string
+                  description: ID of a saved address from your profile
                 shippingAddress:
                   type: object
-                  required: [street, city, state]
+                  description: Manual address (use this OR addressId)
+                  required: [street, city]
                   properties:
                     street:
                       type: string
                     city:
                       type: string
                     state:
+                      type: string
+                    phone:
                       type: string
                 paymentMethod:
                   type: string

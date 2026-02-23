@@ -81,6 +81,10 @@ const userSchema = new Schema(
           required: true,
           trim: true,
         },
+        state: {
+          type: String,
+          trim: true,
+        },
         phone: {
           type: String,
           trim: true,

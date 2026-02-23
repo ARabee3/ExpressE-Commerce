@@ -23,7 +23,9 @@ const orderSchema = new Schema(
       },
       state: {
         type: String,
-        required: true,
+      },
+      phone: {
+        type: String,
       },
     },
     orderItems: [
