@@ -28,12 +28,20 @@ const userSchema = new Schema(
     },
     password: {
       type: String,
-      required: true,
       select: false,
     },
     phone: {
       type: String,
-      required: true,
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    authProvider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
     },
     role: {
       type: String,
@@ -92,6 +100,18 @@ const userSchema = new Schema(
   },
   { timestamps: true, versionKey: false },
 );
+
+// Enforce password + phone for local users only
+userSchema.pre("validate", function () {
+  if (this.authProvider === "local") {
+    if (!this.password) {
+      this.invalidate("password", "Password is required for local accounts");
+    }
+    if (!this.phone) {
+      this.invalidate("phone", "Phone is required for local accounts");
+    }
+  }
+});
 
 userSchema.pre("save", hashPassword);
 

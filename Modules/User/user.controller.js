@@ -7,6 +7,9 @@ import jwt from "jsonwebtoken";
 import { sendMailEvent } from "../../Utils/Events/sendEmailEvent.js";
 import { redisClient } from "../../Database/redisConnection.js";
 import { mergeGuestCart } from "../Cart/cart.controller.js";
+import { OAuth2Client } from "google-auth-library";
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const register = catchAsync(async (req, res, next) => {
   const newUser = await userModel.create(req.body);
@@ -364,9 +367,69 @@ const removeFromWishlist = catchAsync(async (req, res, next) => {
   });
 });
 
+const googleLogin = catchAsync(async (req, res, next) => {
+  const { idToken } = req.body;
+
+  // Verify the Google ID token
+  let ticket;
+  try {
+    ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+  } catch {
+    return next(new AppError("Invalid Google token", 401));
+  }
+
+  const { sub: googleId, email, name } = ticket.getPayload();
+
+  // Find existing user by googleId or email
+  let user = await userModel.findOne({
+    $or: [{ googleId }, { email }],
+    isDeleted: false,
+  });
+
+  if (user) {
+    // Link Google account if user registered with email/password but hasn't linked yet
+    if (!user.googleId) {
+      user.googleId = googleId;
+      user.authProvider = "google";
+      await user.save({ validateModifiedOnly: true });
+    }
+  } else {
+    // Create new user — Google users are auto-verified, no password needed
+    user = await userModel.create({
+      name,
+      email,
+      googleId,
+      authProvider: "google",
+      isVerified: true,
+    });
+  }
+
+  const token = user.generateToken();
+  const refreshToken = user.generateRefreshToken();
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  // Merge guest cart if sessionId provided
+  const sessionId = req.body.sessionId || req.headers["x-session-id"];
+  if (sessionId) {
+    await mergeGuestCart(user._id, sessionId);
+  }
+
+  res.json({ success: true, data: token });
+});
+
 export {
   register,
   login,
+  googleLogin,
   verifyEmail,
   refresh,
   logout,

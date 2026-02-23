@@ -184,3 +184,10 @@ export const updateProfileValidation = joi.object({
         "Phone must contain only digits and + - ( ) spaces",
     }),
 });
+
+export const googleLoginValidation = joi.object({
+  idToken: joi.string().required().messages({
+    "string.empty": "Google ID token is required",
+  }),
+  sessionId: joi.string().optional(),
+});
