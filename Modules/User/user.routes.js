@@ -6,11 +6,13 @@ import {
   resetPasswordValidation,
   changePasswordValidation,
   updateProfileValidation,
+  googleLoginValidation,
 } from "../../Validations/userValidation.js";
 import { verifyToken } from "../../Middlewares/verifyToken.js";
 import {
   register,
   login,
+  googleLogin,
   verifyEmail,
   refresh,
   logout,
@@ -32,6 +34,7 @@ const userRoutes = express.Router();
 
 userRoutes.post("/register", authLimiter, validate(userValidation), register);
 userRoutes.post("/login", authLimiter, login);
+userRoutes.post("/google-login", authLimiter, validate(googleLoginValidation), googleLogin);
 userRoutes.post("/logout", verifyToken, authLimiter, logout);
 userRoutes.post("/refresh", verifyToken, authLimiter, refresh);
 userRoutes.post("/verify-email", verifyToken, authLimiter, verifyEmail);
