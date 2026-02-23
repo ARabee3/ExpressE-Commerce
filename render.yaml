@@ -1,0 +1,42 @@
+# Render Blueprint — https://docs.render.com/blueprint-spec
+# Connect your GitHub repo at dashboard.render.com > New > Blueprint
+# Render will auto-detect this file and configure the service.
+
+services:
+  - type: web
+    name: express-ecommerce-api
+    runtime: node
+    plan: free
+
+    buildCommand: npm install
+    startCommand: node app.js
+
+    healthCheckPath: /health
+
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+
+      - key: PORT
+        value: 3000
+
+      - key: BASE_URL
+        sync: false # Set this in Render dashboard to your *.onrender.com URL
+
+      - key: MONGODB_URI
+        sync: false # Set in Render dashboard
+
+      - key: REDIS_URL
+        sync: false # Set in Render dashboard
+
+      - key: SECRETKEY
+        sync: false # Set in Render dashboard
+
+      - key: REFRESH_TOKEN_SECRET
+        sync: false # Set in Render dashboard
+
+      - key: EMAIL
+        sync: false # Set in Render dashboard
+
+      - key: GOOGLE_APP_PASSWORD
+        sync: false # Set in Render dashboard
