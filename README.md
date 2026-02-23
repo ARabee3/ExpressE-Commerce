@@ -112,7 +112,6 @@ You can test all endpoints directly from the browser. Click **Authorize** 🔓 a
 ```
 ├── app.js                     # Entry point (connects DB/Redis, starts server)
 ├── createApp.js               # Express app factory (testable)
-├── render.yaml                # Render deployment blueprint
 ├── .env.example               # Environment variable template
 ├── Database/
 │   ├── Models/                # Mongoose models (7 models)
@@ -219,31 +218,34 @@ npm test
 
 Tests use a separate `_test` database that is automatically dropped after the suite completes.
 
-## 🚀 Deployment (Render)
+## 🚀 Deployment (Koyeb)
 
-The project includes a [`render.yaml`](render.yaml) Blueprint for one-click deployment to [Render](https://render.com).
+The API is deployed on [Koyeb](https://www.koyeb.com) — free tier, no credit card required.
+
+Koyeb auto-detects Node.js from `package.json` and runs `npm start`.
 
 ### Quick Deploy
 
 1. Push the repo to GitHub
-2. Go to [dashboard.render.com](https://dashboard.render.com) → **New** → **Blueprint**
-3. Select your repository — Render auto-detects `render.yaml`
-4. Fill in the environment variables (see [`.env.example`](.env.example) for reference):
+2. Sign up at [app.koyeb.com](https://app.koyeb.com) (use GitHub login — no credit card needed)
+3. Click **Create Web Service** → select your GitHub repo (`ARabee3/ExpressE-Commerce`)
+4. Set **Branch** to your deployment branch (e.g. `feat/user` or `master`)
+5. Koyeb auto-detects Node.js — confirm **Build command**: `npm install` and **Start command**: `npm start`
+6. Add environment variables (see [`.env.example`](.env.example)):
 
    | Variable | Description |
    |---|---|
+   | `ENVIRONMENT` | `production` |
+   | `PORT` | `8000` (Koyeb default) |
    | `MONGODB_URI` | MongoDB Atlas connection string |
    | `REDIS_URL` | Upstash Redis URL (`rediss://...`) |
    | `SECRETKEY` | JWT access token secret |
    | `REFRESH_TOKEN_SECRET` | JWT refresh token secret |
    | `EMAIL` | Gmail address for transactional emails |
    | `GOOGLE_APP_PASSWORD` | Gmail app password |
-   | `BASE_URL` | Your Render URL (e.g. `https://express-ecommerce-api.onrender.com`) |
+   | `BASE_URL` | Your Koyeb URL (e.g. `https://express-ecommerce-api-<user>.koyeb.app`) |
 
-5. Click **Deploy** — Render installs dependencies and starts the server
-6. Verify at `https://<your-app>.onrender.com/health`
-
-> **Note:** The free tier spins down after 15 minutes of inactivity. The first request after idle may take ~30 seconds to cold-start.
+7. Click **Deploy** and verify at `https://<your-app>.koyeb.app/health`
 
 ### What's pre-configured
 
