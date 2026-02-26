@@ -25,7 +25,7 @@ const reviewSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 reviewSchema.index({ user: 1, product: 1}, { unique: true});
 

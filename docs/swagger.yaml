@@ -9,7 +9,8 @@ info:
     1. Register via `POST /register`
     2. Verify your email with the OTP sent to your inbox via `POST /verify-email`
     3. Login via `POST /login` to receive an access token
-    4. Use the token: `Authorization: Bearer <token>`
+    4. **Or** use Google Sign-In via `POST /google-login` with a Google ID token
+    5. Use the token: `Authorization: Bearer <token>`
 
     Access tokens expire in **30 minutes**. Use `POST /refresh` with the httpOnly refresh-token cookie to get a new one.
 
@@ -74,6 +75,9 @@ components:
           enum: [Customer, Seller, Admin]
         isVerified:
           type: boolean
+        authProvider:
+          type: string
+          enum: [local, google]
         isDeleted:
           type: boolean
         addresses:
@@ -96,6 +100,8 @@ components:
         city:
           type: string
         street:
+          type: string
+        state:
           type: string
         phone:
           type: string
@@ -429,6 +435,44 @@ paths:
                     description: JWT access token
         "401":
           description: Invalid credentials or unverified email
+
+  /google-login:
+    post:
+      tags: [Auth]
+      summary: Login with Google
+      description: |
+        Authenticate using a Google ID token. If the user doesn't exist, a new account is created automatically (verified, no password).
+        If an account with the same email already exists, the Google account is linked.
+        Returns an access token and sets a `refreshToken` httpOnly cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idToken]
+              properties:
+                idToken:
+                  type: string
+                  description: Google ID token from the Google Sign-In flow
+                sessionId:
+                  type: string
+                  description: Guest cart session ID to merge on login
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: string
+                    description: JWT access token
+        "401":
+          description: Invalid Google token
 
   /verify-email:
     post:
@@ -851,7 +895,7 @@ paths:
                       $ref: "#/components/schemas/Category"
     post:
       tags: [Categories]
-      summary: Create a category (Seller)
+      summary: Create a category (Admin)
       security:
         - bearerAuth: []
       requestBody:
@@ -872,7 +916,7 @@ paths:
   /categories/{id}:
     put:
       tags: [Categories]
-      summary: Update a category (Seller)
+      summary: Update a category (Admin)
       security:
         - bearerAuth: []
       parameters:
@@ -891,7 +935,7 @@ paths:
           description: Category updated
     delete:
       tags: [Categories]
-      summary: Delete a category (Seller)
+      summary: Delete a category (Admin)
       description: Cannot delete a category that has products
       security:
         - bearerAuth: []
@@ -1082,6 +1126,8 @@ paths:
     post:
       tags: [Orders]
       summary: Place an order from cart
+      description: |
+        Provide either `addressId` (pick a saved address from your profile) or `shippingAddress` (enter manually). Not both.
       security:
         - bearerAuth: []
       requestBody:
@@ -1090,19 +1136,25 @@ paths:
           application/json:
             schema:
               type: object
-              required: [cartId, shippingAddress, paymentMethod]
+              required: [cartId, paymentMethod]
               properties:
                 cartId:
                   type: string
+                addressId:
+                  type: string
+                  description: ID of a saved address from your profile
                 shippingAddress:
                   type: object
-                  required: [street, city, state]
+                  description: Manual address (use this OR addressId)
+                  required: [street, city]
                   properties:
                     street:
                       type: string
                     city:
                       type: string
                     state:
+                      type: string
+                    phone:
                       type: string
                 paymentMethod:
                   type: string

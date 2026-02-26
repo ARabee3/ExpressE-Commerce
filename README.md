@@ -4,7 +4,7 @@ A full-featured RESTful E-Commerce API built with **Express.js**, **MongoDB**, a
 
 ## ✨ Features
 
-- **Authentication** — JWT access/refresh tokens, email OTP verification, password reset
+- **Authentication** — JWT access/refresh tokens, **Google OAuth**, email OTP verification, password reset
 - **Role-Based Access** — Customer, Seller, Admin with middleware guards
 - **Product Management** — CRUD, search, filtering, pagination, category support
 - **Shopping Cart** — Guest & authenticated carts, coupon support, cart merge on login
@@ -26,11 +26,11 @@ A full-featured RESTful E-Commerce API built with **Express.js**, **MongoDB**, a
 | Framework | Express 5 |
 | Database | MongoDB (Mongoose) |
 | Cache / Rate Limit | Redis (Upstash compatible) |
-| Auth | JWT + bcrypt |
+| Auth | JWT + bcrypt + Google OAuth |
 | Payments | Stripe |
 | Email | Nodemailer (Gmail) |
 | Validation | Joi |
-| Security | Helmet, CORS, express-mongo-sanitize |
+| Security | Helmet, CORS, Custom NoSQL Injection Protection |
 | Logging | Pino |
 | Testing | Vitest + Supertest |
 | Docs | Swagger UI (OpenAPI 3.0) |
@@ -41,6 +41,7 @@ A full-featured RESTful E-Commerce API built with **Express.js**, **MongoDB**, a
 - **MongoDB** (Atlas or local)
 - **Redis** (Upstash, local, or Docker)
 - **Stripe account** (for payments — optional)
+- **Google Cloud OAuth Client ID** (for Google login — optional)
 
 ## 🚀 Getting Started
 
@@ -79,6 +80,9 @@ REFRESH_TOKEN_SECRET=<your-refresh-token-secret>
 # Email (Gmail App Password)
 EMAIL=your-email@gmail.com
 GOOGLE_APP_PASSWORD=<your-google-app-password>
+
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID=<your-client-id>.apps.googleusercontent.com
 
 # Stripe (optional)
 STRIPE_SECRET_KEY=sk_test_...
@@ -120,6 +124,7 @@ You can test all endpoints directly from the browser. Click **Authorize** 🔓 a
 │   ├── globalErrorHandler.js  # Central error handler
 │   ├── rateLimiter.js         # Redis-backed rate limiting
 │   ├── enforceHttps.js        # HTTPS redirect (production)
+│   ├── sanitizeNoSQL.js       # NoSQL injection protection
 │   ├── validate.js            # Joi validation middleware
 │   ├── verifyToken.js         # JWT authentication
 │   ├── isAdmin.js             # Admin guard
@@ -158,11 +163,15 @@ You can test all endpoints directly from the browser. Click **Authorize** 🔓 a
 ## 🔐 Authentication Flow
 
 ```
-Register → Receive OTP email → Verify Email → Login → Get Access Token
-                                                  ↓
-                                        Use token in Authorization header
-                                                  ↓
-                                        Token expires (30min) → POST /refresh
+Email/Password:
+  Register → Receive OTP email → Verify Email → Login → Get Access Token
+
+Google OAuth:
+  Google Sign-In → POST /google-login { idToken } → Get Access Token
+                                                        ↓
+                                              Use token in Authorization header
+                                                        ↓
+                                              Token expires (30min) → POST /refresh
 ```
 
 ## 🛒 Shopping Flow
@@ -183,7 +192,7 @@ Track Order → Receive status emails
 | Manage cart & orders | ✅ | ✅ | ✅ |
 | Write reviews | ✅ | ✅ | ✅ |
 | Create products | ❌ | ✅ | ❌ |
-| Manage categories | ❌ | ✅ | ❌ |
+| Manage categories | ❌ | ❌ | ✅ |
 | Manage all orders | ❌ | ❌ | ✅ |
 | Manage users | ❌ | ❌ | ✅ |
 | Manage coupons | ❌ | ❌ | ✅ |

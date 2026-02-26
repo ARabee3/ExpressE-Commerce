@@ -28,7 +28,7 @@ import swaggerDocument from "./docs/swaggerConfig.js";
 import { enforceHttps } from "./Middlewares/enforceHttps.js";
 import mongoose from "mongoose";
 import { redisClient } from "./Database/redisConnection.js";
-import mongoSanitize from "express-mongo-sanitize";
+import { sanitizeNoSQL } from "./Middlewares/sanitizeNoSQL.js";
 
 /**
  * Creates and configures the Express application.
@@ -47,7 +47,7 @@ export const createApp = () => {
   app.post("/webhook", express.raw({ type: "application/json" }), stripeWebhook);
   app.use(express.json({ limit: "10kb" }));
   app.use(express.urlencoded({ extended: true, limit: "10kb" }));
-  app.use(mongoSanitize()); 
+  app.use(sanitizeNoSQL);
 
   app.use(cookieParser());
 

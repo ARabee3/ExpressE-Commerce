@@ -86,6 +86,10 @@ export const addAddressValidation = joi.object({
     "string.min": "Street must be at least 3 characters",
     "string.max": "Street must not exceed 200 characters",
   }),
+  state: joi.string().trim().min(2).max(100).messages({
+    "string.min": "State must be at least 2 characters",
+    "string.max": "State must not exceed 100 characters",
+  }),
   phone: joi
     .string()
     .min(7)
@@ -183,4 +187,11 @@ export const updateProfileValidation = joi.object({
       "string.pattern.base":
         "Phone must contain only digits and + - ( ) spaces",
     }),
+});
+
+export const googleLoginValidation = joi.object({
+  idToken: joi.string().required().messages({
+    "string.empty": "Google ID token is required",
+  }),
+  sessionId: joi.string().optional(),
 });
