@@ -83,6 +83,8 @@ export const createApp = () => {
     customSiteTitle: "Express E-Commerce API Docs",
     customCss: ".swagger-ui .topbar { display: none }",
   }));
+//serve images
+app.use("/uploads",express.static("uploads"));
 
   // Ensure all models are registered before routes
   orderModel;
