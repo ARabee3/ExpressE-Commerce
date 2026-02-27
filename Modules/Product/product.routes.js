@@ -4,11 +4,11 @@ import { productValidation, updateProductValidation, deleteProductValidation } f
 import { validate } from "../../Middlewares/validate.js";
 import { verifyToken } from "../../Middlewares/verifyToken.js";
 import { isSellerAndActive } from "../../Middlewares/isSellerAndActive.js";
-
+import { uploadProductImages } from "../../Middlewares/uploadProductImages.js";
 
 const productsRoutes = express.Router();
 
-productsRoutes.post("/products", verifyToken,isSellerAndActive,validate(productValidation), createProduct);
+productsRoutes.post("/products", verifyToken,isSellerAndActive,uploadProductImages,validate(productValidation), createProduct);
 
 productsRoutes.get("/products", getProducts);
 
