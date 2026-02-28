@@ -1,14 +1,19 @@
 import multer from "multer";
+import os from "os";
 import path from "path";
 import fs from "fs";
 import { AppError } from "../Utils/Error/AppError.js";
 
-//ensure folder exist
-const uploadpath = "uploads/products";
+// Determine if we are in production (Vercel) or development
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Use /tmp in production (Vercel read-only filesystem workaround), or 'uploads/products' locally
+const uploadpath = isProduction ? os.tmpdir() : "uploads/products";
 
 if(!fs.existsSync(uploadpath)){
     fs.mkdirSync(uploadpath, { recursive: true});
 }
+
 //storage
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
