@@ -1,12 +1,9 @@
 import { readFile } from "fs/promises";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import { resolve, join } from "path";
 import YAML from "yaml";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
 const swaggerYaml = await readFile(
-  join(__dirname, "swagger.yaml"),
+  resolve(process.cwd(), "docs/swagger.yaml"),
   "utf-8",
 );
 
