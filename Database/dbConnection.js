@@ -5,15 +5,16 @@ import logger from "../Utils/logger.js";
 let cachedConnection = null;
 
 export const dbConnection = async () => {
-  // If we have a cached connection promise, wait for it and return
+  // Check if we have a cached connection
   if (cachedConnection) {
-    return cachedConnection;
+    // If connected (1) or connecting (2), return the cached promise
+    if (mongoose.connection.readyState === 1 || mongoose.connection.readyState === 2) {
+      return cachedConnection;
+    }
+    // Otherwise, the connection is dead/disconnecting, so nullify cache to reconnect
+    cachedConnection = null;
   }
 
-  // If already connected, reuse connection and ensure promise is cached
-  if (mongoose.connection.readyState === 1) {
-    return mongoose;
-  }
 
   if (mongoose.connection.readyState === 2) {
     if (!cachedConnection) {
