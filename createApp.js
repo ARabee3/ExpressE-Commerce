@@ -26,6 +26,7 @@ import sellerRoutes from "./Modules/Seller/seller.routes.js";
 import { getSwaggerDocument } from "./docs/swaggerConfig.js";
 import { enforceHttps } from "./Middlewares/enforceHttps.js";
 import mongoose from "mongoose";
+import { dbConnection } from "./Database/dbConnection.js";
 import { redisClient } from "./Database/redisConnection.js";
 import { sanitizeNoSQL } from "./Middlewares/sanitizeNoSQL.js";
 
@@ -79,14 +80,31 @@ export const createApp = () => {
   app.set("trust proxy", 1);
   app.use(globalLimiter);
 
+  // Root route
   app.get("/", (req, res) => {
-    res.status(200).json({ status: "success", message: "Express E-Commerce API is running" });
+    res
+      .status(200)
+      .json({
+        status: "success",
+        message: "Express E-Commerce API is running",
+      });
   });
 
   app.get("/health", async (req, res) => {
     // Check MongoDB connection by running a lightweight command
     let mongoStatus = "disconnected";
     let dbState = mongoose.connection.readyState;
+
+    // Try to reconnect if disconnected
+    if (dbState === 0 || dbState === 3) {
+      try {
+        await dbConnection();
+        dbState = mongoose.connection.readyState;
+      } catch (err) {
+        logger.error({ err }, "Health Check Reconnect Failed");
+      }
+    }
+
     try {
       if (dbState === 1) {
         // Run ping command on admin database to verify connectivity
@@ -133,51 +151,58 @@ export const createApp = () => {
   // Redirect case-insensitive /api-docs requests to lowercase
   app.get("/API-DOCS", (req, res) => res.redirect("/api-docs"));
 
-  // Manually serve Swagger UI to avoid Vercel static file serving issues
-  app.use("/api-docs", async (req, res) => {
-    const swaggerDocument = await getSwaggerDocument();
-    
-    // Fallback if document fails to load properly with a basic structure
-    const safeDocument = swaggerDocument && typeof swaggerDocument === 'object' 
-      ? swaggerDocument 
-      : { openapi: '3.0.0', info: { title: 'Error', version: '1.0.0' }, paths: {} };
+  app.get("/api-docs", async (req, res) => {
+    try {
+      const swaggerDocument = await getSwaggerDocument();
 
-    res.send(`
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Express E-Commerce API Docs</title>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.10.3/swagger-ui.min.css" />
-        <style>
-          html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
-          *, *:before, *:after { box-sizing: inherit; }
-          body { margin: 0; background: #fafafa; }
-          .swagger-ui .topbar { display: none }
-        </style>
-      </head>
-      <body>
-        <div id="swagger-ui"></div>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.10.3/swagger-ui-bundle.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.10.3/swagger-ui-standalone-preset.js"></script>
-        <script>
-          window.onload = function() {
-            window.ui = SwaggerUIBundle({
-              spec: ${JSON.stringify(safeDocument)},
-              dom_id: '#swagger-ui',
-              deepLinking: true,
-              presets: [
-                SwaggerUIBundle.presets.apis,
-                SwaggerUIStandalonePreset
-              ],
-              layout: "StandaloneLayout"
-            });
-          };
-        </script>
-      </body>
-      </html>
-    `);
+      // Safely serialize the document
+      let specJson = "{}";
+      try {
+        specJson = JSON.stringify(swaggerDocument);
+      } catch (e) {
+        console.error("Swagger serialization failed", e);
+      }
+
+      res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Express E-Commerce API Docs</title>
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.10.3/swagger-ui.min.css" />
+          <style>
+            html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
+            *, *:before, *:after { box-sizing: inherit; }
+            body { margin: 0; background: #fafafa; }
+            .swagger-ui .topbar { display: none }
+          </style>
+        </head>
+        <body>
+          <div id="swagger-ui"></div>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.10.3/swagger-ui-bundle.js"></script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.10.3/swagger-ui-standalone-preset.js"></script>
+          <script>
+            window.onload = function() {
+              window.ui = SwaggerUIBundle({
+                spec: ${specJson},
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                  SwaggerUIBundle.presets.apis,
+                  SwaggerUIStandalonePreset
+                ],
+                layout: "StandaloneLayout"
+              });
+            };
+          </script>
+        </body>
+        </html>
+      `);
+    } catch (err) {
+      console.error("Swagger generation failed", err);
+      res.status(500).send("API Docs Error");
+    }
   });
 
   //serve images

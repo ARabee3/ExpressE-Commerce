@@ -39,3 +39,14 @@ export const getSwaggerDocument = async () => {
   }
 };
 
+      openapi: "3.0.0",
+      info: {
+        title: "API Documentation Error",
+        version: "1.0.0",
+        description: "Failed to load API documentation. Please check server logs.",
+      },
+      paths: {},
+    };
+  }
+};
+
