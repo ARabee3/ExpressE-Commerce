@@ -10,13 +10,23 @@ const isProduction = process.env.NODE_ENV === 'production';
 // Use /tmp in production (Vercel read-only filesystem workaround), or 'uploads/products' locally
 const uploadpath = isProduction ? os.tmpdir() : "uploads/products";
 
-if(!fs.existsSync(uploadpath)){
-    fs.mkdirSync(uploadpath, { recursive: true});
-}
-
 //storage
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
+        // Ensure directory exists lazily
+        if (!fs.existsSync(uploadpath)) {
+            try {
+                fs.mkdirSync(uploadpath, { recursive: true });
+            } catch (error) {
+                // Only log if it's not EEXIST (which is fine, just a race condition)
+                if (error.code !== 'EEXIST') {
+                    console.error("Failed to create upload directory:", error);
+                    // Pass error to callback if we can't ensure directory exists
+                    // cb(error); // Ideally we should stop here if strict, but let's try to proceed or just log.
+                    // If we can't write, multer will fail later anyway.
+                }
+            }
+        }
         cb(null, uploadpath);
     },
     filename: function(req,file, cb) {
