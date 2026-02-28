@@ -9,10 +9,17 @@ export const redisClient = createClient({
 redisClient.on("error", (err) => logger.error({ err }, "Redis client error"));
 
 export const redisConnection = async () => {
+  if (redisClient.isOpen) {
+    return;
+  }
   try {
     await redisClient.connect();
     logger.info("Connected to Redis");
   } catch (err) {
+    // Check if the error is just "Socket already opened" which can happen in race conditions
+    if (err.message === "Socket already opened") {
+      return;
+    }
     logger.fatal({ err }, "Redis connection failed");
     throw err;
   }
