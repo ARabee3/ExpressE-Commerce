@@ -23,8 +23,7 @@ import cartRoutes from "./Modules/Cart/cart.routes.js";
 import helmet from "helmet";
 import { globalLimiter, initLimiters } from "./Middlewares/rateLimiter.js";
 import sellerRoutes from "./Modules/Seller/seller.routes.js";
-import swaggerUi from "swagger-ui-express";
-import swaggerDocument from "./docs/swaggerConfig.js";
+import { getSwaggerDocument } from "./docs/swaggerConfig.js";
 import { enforceHttps } from "./Middlewares/enforceHttps.js";
 import mongoose from "mongoose";
 import { redisClient } from "./Database/redisConnection.js";
@@ -80,6 +79,10 @@ export const createApp = () => {
   app.set("trust proxy", 1);
   app.use(globalLimiter);
 
+  app.get("/", (req, res) => {
+    res.status(200).json({ status: "success", message: "Express E-Commerce API is running" });
+  });
+
   app.get("/health", async (req, res) => {
     // Check MongoDB connection by running a lightweight command
     let mongoStatus = "disconnected";
@@ -131,7 +134,14 @@ export const createApp = () => {
   app.get("/API-DOCS", (req, res) => res.redirect("/api-docs"));
 
   // Manually serve Swagger UI to avoid Vercel static file serving issues
-  app.use("/api-docs", (req, res) => {
+  app.use("/api-docs", async (req, res) => {
+    const swaggerDocument = await getSwaggerDocument();
+    
+    // Fallback if document fails to load properly with a basic structure
+    const safeDocument = swaggerDocument && typeof swaggerDocument === 'object' 
+      ? swaggerDocument 
+      : { openapi: '3.0.0', info: { title: 'Error', version: '1.0.0' }, paths: {} };
+
     res.send(`
       <!DOCTYPE html>
       <html lang="en">
@@ -154,7 +164,7 @@ export const createApp = () => {
         <script>
           window.onload = function() {
             window.ui = SwaggerUIBundle({
-              spec: ${JSON.stringify(swaggerDocument)},
+              spec: ${JSON.stringify(safeDocument)},
               dom_id: '#swagger-ui',
               deepLinking: true,
               presets: [
