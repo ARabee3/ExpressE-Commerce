@@ -127,20 +127,49 @@ export const createApp = () => {
     });
   });
 
-  app.use(
-    "/api-docs",
-    swaggerUi.serve,
-    swaggerUi.setup(swaggerDocument, {
-      customSiteTitle: "Express E-Commerce API Docs",
-      customCss: ".swagger-ui .topbar { display: none }",
-      customCssUrl:
-        "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui.min.css",
-      customJs: [
-        "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-bundle.js",
-        "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.0.0/swagger-ui-standalone-preset.js",
-      ],
-    }),
-  );
+  // Redirect case-insensitive /api-docs requests to lowercase
+  app.get("/API-DOCS", (req, res) => res.redirect("/api-docs"));
+
+  // Manually serve Swagger UI to avoid Vercel static file serving issues
+  app.use("/api-docs", (req, res) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Express E-Commerce API Docs</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.10.3/swagger-ui.min.css" />
+        <style>
+          html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
+          *, *:before, *:after { box-sizing: inherit; }
+          body { margin: 0; background: #fafafa; }
+          .swagger-ui .topbar { display: none }
+        </style>
+      </head>
+      <body>
+        <div id="swagger-ui"></div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.10.3/swagger-ui-bundle.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.10.3/swagger-ui-standalone-preset.js"></script>
+        <script>
+          window.onload = function() {
+            window.ui = SwaggerUIBundle({
+              spec: ${JSON.stringify(swaggerDocument)},
+              dom_id: '#swagger-ui',
+              deepLinking: true,
+              presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIStandalonePreset
+              ],
+              layout: "StandaloneLayout"
+            });
+          };
+        </script>
+      </body>
+      </html>
+    `);
+  });
+
   //serve images
   app.use("/uploads", express.static("uploads"));
 
