@@ -55,13 +55,33 @@ export const createApp = () => {
   app.use(globalLimiter);
 
   app.get("/health", async (req, res) => {
-    const mongoStatus =
-      mongoose.connection.readyState === 1 ? "connected" : "disconnected";
+    // Check MongoDB connection by running a lightweight command
+    let mongoStatus = "disconnected";
+    let dbState = mongoose.connection.readyState;
+    try {
+      if (dbState === 1) {
+        // Run ping command on admin database to verify connectivity
+        await mongoose.connection.db.admin().ping();
+        mongoStatus = "connected";
+      } else {
+        // If not connected (state 1), try to reconnect explicitly if needed,
+        // or just report status based on state
+        mongoStatus = dbState === 2 ? "connecting" : "disconnected";
+      }
+    } catch (err) {
+      mongoStatus = "disconnected";
+      logger.error({ err }, "MongoDB Health Check Failed");
+    }
 
     let redisStatus = "disconnected";
     try {
-      await redisClient.ping();
-      redisStatus = "connected";
+      if (redisClient.isOpen) {
+         // Verify redis is responsive
+         await redisClient.ping();
+         redisStatus = "connected";
+      } else {
+         redisStatus = "disconnected";
+      }
     } catch {
       redisStatus = "disconnected";
     }
@@ -74,6 +94,7 @@ export const createApp = () => {
       timestamp: new Date().toISOString(),
       services: {
         mongodb: mongoStatus,
+        mongodbState: dbState, // Debug info: 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
         redis: redisStatus,
       },
     });
