@@ -154,7 +154,8 @@ export const createApp = () => {
 
   app.get("/api-docs", async (req, res) => {
     try {
-      const swaggerDocument = await getSwaggerDocument();
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const swaggerDocument = await getSwaggerDocument(baseUrl);
 
       // Safely serialize the document
       let specJson = "{}";
