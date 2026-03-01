@@ -10,7 +10,7 @@ export const getSwaggerDocument = async () => {
   try {
     const swaggerYaml = await readFile(
       resolve(__dirname, "swagger.yaml"),
-      "utf-8"
+      "utf-8",
     );
 
     const swaggerDocument = YAML.parse(swaggerYaml);
@@ -19,7 +19,10 @@ export const getSwaggerDocument = async () => {
     swaggerDocument.servers = [
       {
         url: process.env.BASE_URL || "http://localhost:3000",
-        description: process.env.ENVIRONMENT === "production" ? "Production" : "Development",
+        description:
+          process.env.ENVIRONMENT === "production"
+            ? "Production"
+            : "Development",
       },
     ];
 
@@ -32,21 +35,10 @@ export const getSwaggerDocument = async () => {
       info: {
         title: "API Documentation Error",
         version: "1.0.0",
-        description: "Failed to load API documentation. Please check server logs.",
+        description:
+          "Failed to load API documentation. Please check server logs.",
       },
       paths: {},
     };
   }
 };
-
-      openapi: "3.0.0",
-      info: {
-        title: "API Documentation Error",
-        version: "1.0.0",
-        description: "Failed to load API documentation. Please check server logs.",
-      },
-      paths: {},
-    };
-  }
-};
-

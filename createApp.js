@@ -148,8 +148,9 @@ export const createApp = () => {
     });
   });
 
-  // Redirect case-insensitive /api-docs requests to lowercase
-  app.get("/API-DOCS", (req, res) => res.redirect("/api-docs"));
+
+  // Redirect trailing-slash variant (Express 5 treats them as distinct routes)
+  //app.get("/api-docs/", (req, res) => res.redirect("/api-docs"));
 
   app.get("/api-docs", async (req, res) => {
     try {
