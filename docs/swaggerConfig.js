@@ -6,7 +6,7 @@ import YAML from "yaml";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export const getSwaggerDocument = async () => {
+export const getSwaggerDocument = async (baseUrl) => {
   try {
     const swaggerYaml = await readFile(
       resolve(__dirname, "swagger.yaml"),
@@ -15,10 +15,12 @@ export const getSwaggerDocument = async () => {
 
     const swaggerDocument = YAML.parse(swaggerYaml);
 
-    // Dynamically set server URL from environment
+    // Dynamically set server URL from the incoming request or environment
+    const serverUrl =
+      baseUrl || process.env.BASE_URL || "http://localhost:3000";
     swaggerDocument.servers = [
       {
-        url: process.env.BASE_URL || "http://localhost:3000",
+        url: serverUrl,
         description:
           process.env.ENVIRONMENT === "production"
             ? "Production"
