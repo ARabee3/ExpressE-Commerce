@@ -27,6 +27,15 @@ export const productValidation = Joi.object({
   }),
 });
 
+export const IdValidation = Joi.object({
+  id: Joi.string().hex().length(24).required().messages({
+    "string.base": "Product ID must be a string",
+    "string.hex": "Product ID must be a valid MongoDB ObjectId",
+    "string.length": "Product ID must be exactly 24 characters",
+    "any.required": "Product ID is required",
+  }),
+});
+
 export const updateProductValidation = Joi.object({
   
     id: Joi.string().hex().length(24).required().messages({
