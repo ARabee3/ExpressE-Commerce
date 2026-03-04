@@ -90,7 +90,23 @@ export const getProducts = catchAsync(async (req, res, next) => {
     products,
   });
 });
+//get product by id
+export const getProductById = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
 
+  const product = await productModel
+    .findById(id)
+    .populate("category", "name slug");
+
+  if (!product) {
+    return next(new AppError("Product not found", 404));
+  }
+
+  res.status(200).json({
+    status: "success",
+    data: product,
+  });
+});
 //updateProduct
 export const updateProduct = catchAsync(async (req, res, next) => {
   const { id } = req.params;
