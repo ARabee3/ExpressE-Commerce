@@ -2,10 +2,21 @@ import { productModel } from "../../Database/Models/product.model.js";
 import { categoryModel } from "../../Database/Models/category.model.js";
 import { catchAsync } from "../../Utils/Error/catchAsync.js";
 import slugify from "slugify";
+import { AppError } from "../../Utils/Error/AppError.js";
 //create product
 export const createProduct = catchAsync(async (req, res, next) => {
   req.body.sellerId = req.user._id;
-  const product = await productModel.create(req.body);
+  // Make sure images uploaded
+  if (!req.files || req.files.length === 0) {
+    return next(new AppError("Product must have at least one image", 400));
+  }
+  // Convert files to array of paths
+  const imagePaths = req.files.map((file) => file.path);
+
+  const product = await productModel.create({
+    ...req.body,
+    images: imagePaths,
+  });
 
   res.status(201).json({
     status: "success",
@@ -102,10 +113,17 @@ export const updateProduct = catchAsync(async (req, res, next) => {
   if (req.body.name) {
     req.body.slug = slugify(req.body.name, { lower: true });
   }
-  const updatedProduct = await productModel.findByIdAndUpdate(id, filteredBody, {
-    new: true,
-    runValidators: true,
-  });
+  if (req.files && req.files.length > 0) {
+    req.body.images = req.files.map((file) => file.path);
+  }
+  const updatedProduct = await productModel.findByIdAndUpdate(
+    id,
+    filteredBody,
+    {
+      new: true,
+      runValidators: true,
+    },
+  );
 
   if (!updatedProduct) {
     return next(new AppError("Product not found ", 404));
@@ -130,6 +148,5 @@ export const deleteProduct = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     message: "Product deleted successfully",
-    
   });
 });

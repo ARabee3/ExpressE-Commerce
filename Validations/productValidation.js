@@ -16,11 +16,6 @@ export const productValidation = Joi.object({
     "number.min": "price cannot be negative",
     "any.required": "price is required",
   }),
-  images: Joi.array().items(Joi.string()).min(1).required().messages({
-    "array.base": "Images must be an array",
-    "array.min": "At least one image is required",
-    "any.required": "Images are required",
-  }),
   stock: Joi.number().min(0).messages({
     "number.base": "stock must be a number",
     "number.min": "stock cannot be negative",
