@@ -12,7 +12,7 @@ const generateSessionId = () =>
 const getCartIdentifier = (req) => {
   const userId = req.user?._id || null;
   const sessionId = !userId
-    ? req.body.sessionId || req.headers["x-session-id"] || null
+    ? req.body?.sessionId || req.headers["x-session-id"] || null
     : null;
   return { userId, sessionId };
 };
@@ -232,7 +232,8 @@ export const applyCoupon = catchAsync(async (req, res, next) => {
     code: couponCode.toUpperCase(),
     isActive: true,
   });
-  if (!coupon) return next(new AppError("Invalid or inactive coupon code", 404));
+  if (!coupon)
+    return next(new AppError("Invalid or inactive coupon code", 404));
 
   if (new Date(coupon.expireDate) < new Date()) {
     return next(new AppError("This coupon has expired", 400));

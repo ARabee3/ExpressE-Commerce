@@ -8,6 +8,8 @@ let _authLimiter = null;
 // Called from app.js after Redis is connected — rateLimit() runs at init time,
 // not inside a request handler, so express-rate-limit's validation passes.
 export const initLimiters = () => {
+  if (_globalLimiter) return; // Prevent re-initialization
+
   _globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 500,

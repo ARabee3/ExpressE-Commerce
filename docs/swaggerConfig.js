@@ -1,23 +1,46 @@
 import { readFile } from "fs/promises";
+import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { dirname, join } from "path";
 import YAML from "yaml";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-const swaggerYaml = await readFile(
-  join(__dirname, "swagger.yaml"),
-  "utf-8",
-);
+export const getSwaggerDocument = async (baseUrl) => {
+  try {
+    const swaggerYaml = await readFile(
+      resolve(__dirname, "swagger.yaml"),
+      "utf-8",
+    );
 
-const swaggerDocument = YAML.parse(swaggerYaml);
+    const swaggerDocument = YAML.parse(swaggerYaml);
 
-// Dynamically set server URL from environment
-swaggerDocument.servers = [
-  {
-    url: process.env.BASE_URL || "http://localhost:3000",
-    description: process.env.ENVIRONMENT === "production" ? "Production" : "Development",
-  },
-];
+    // Dynamically set server URL from the incoming request or environment
+    const serverUrl =
+      baseUrl || process.env.BASE_URL || "http://localhost:3000";
+    swaggerDocument.servers = [
+      {
+        url: serverUrl,
+        description:
+          process.env.ENVIRONMENT === "production"
+            ? "Production"
+            : "Development",
+      },
+    ];
 
-export default swaggerDocument;
+    return swaggerDocument;
+  } catch (error) {
+    console.error("Failed to load Swagger document:", error);
+    // Return a minimal valid Swagger object to avoid crashes
+    return {
+      openapi: "3.0.0",
+      info: {
+        title: "API Documentation Error",
+        version: "1.0.0",
+        description:
+          "Failed to load API documentation. Please check server logs.",
+      },
+      paths: {},
+    };
+  }
+};
