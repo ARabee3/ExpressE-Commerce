@@ -11,6 +11,7 @@ import {
   cancelOrder,
   updatePaidStatus,
   createPaymentIntent,
+  confirmPayment,
   trackOrder,
 } from "./order.controller.js";
 import { validate } from "../../Middlewares/validate.js";
@@ -38,6 +39,7 @@ orderRoutes.put(
   cancelOrder,
 );
 orderRoutes.post("/orders/:id/pay-intent", verifyToken, createPaymentIntent);
+orderRoutes.post("/orders/:id/confirm-payment", verifyToken, confirmPayment);
 orderRoutes.put(
   "/orders/:id/pay",
   verifyToken,

@@ -64,7 +64,9 @@ const addOrder = catchAsync(async (req, res, next) => {
     const user = await userModel.findById(userId);
     const savedAddress = user?.addresses?.id(addressId);
     if (!savedAddress) {
-      return next(new AppError("Address not found in your saved addresses", 404));
+      return next(
+        new AppError("Address not found in your saved addresses", 404),
+      );
     }
     resolvedAddress = {
       street: savedAddress.street,
@@ -75,7 +77,9 @@ const addOrder = catchAsync(async (req, res, next) => {
   } else if (shippingAddress) {
     resolvedAddress = shippingAddress;
   } else {
-    return next(new AppError("Either addressId or shippingAddress is required", 400));
+    return next(
+      new AppError("Either addressId or shippingAddress is required", 400),
+    );
   }
 
   // Find cart and validate
@@ -419,6 +423,78 @@ const stripeWebhook = catchAsync(async (req, res, next) => {
   res.status(200).json({ received: true });
 });
 
+const confirmPayment = catchAsync(async (req, res, next) => {
+  const userId = req.user._id;
+  const orderId = req.params.id;
+  const { paymentIntentId } = req.body;
+
+  if (!stripe) {
+    return next(new AppError("Stripe secret key is not configured", 500));
+  }
+
+  if (!paymentIntentId) {
+    return next(new AppError("paymentIntentId is required", 400));
+  }
+
+  const order = await orderModel.findOne({ _id: orderId, userId });
+
+  if (!order) {
+    return next(new AppError("Order not found", 404));
+  }
+
+  if (order.isPaid) {
+    return next(new AppError("Order is already paid", 400));
+  }
+
+  if (order.status !== "Pending") {
+    return next(new AppError("Only pending orders can be confirmed", 400));
+  }
+
+  if (order.paymentMethod !== "Card") {
+    return next(
+      new AppError(
+        "Payment confirmation is only available for Card payment method",
+        400,
+      ),
+    );
+  }
+
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+  if (paymentIntent.metadata?.orderId !== orderId) {
+    return next(new AppError("PaymentIntent does not match this order", 400));
+  }
+
+  if (paymentIntent.status !== "succeeded") {
+    return next(
+      new AppError(
+        `Payment not completed. Current status: ${paymentIntent.status}`,
+        400,
+      ),
+    );
+  }
+
+  order.isPaid = true;
+  order.paidAt = new Date();
+  order.status = "Processing";
+  await order.save();
+
+  if (order.cartId) {
+    await cartModel.findByIdAndDelete(order.cartId);
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Payment confirmed successfully",
+    data: {
+      orderId: order._id,
+      isPaid: order.isPaid,
+      status: order.status,
+      paidAt: order.paidAt,
+    },
+  });
+});
+
 export {
   addOrder,
   getUserOrders,
@@ -426,6 +502,7 @@ export {
   cancelOrder,
   updatePaidStatus,
   createPaymentIntent,
+  confirmPayment,
   stripeWebhook,
   trackOrder,
 };
