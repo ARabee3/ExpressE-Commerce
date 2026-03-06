@@ -76,6 +76,7 @@ export const getProducts = catchAsync(async (req, res, next) => {
   const products = await productModel
     .find(filter)
     .populate("category")
+    .populate("sellerId", "name")
     .sort(sortOption)
     .skip(skip)
     .limit(limitNumber);
@@ -96,8 +97,8 @@ export const getProductById = catchAsync(async (req, res, next) => {
 
   const product = await productModel
     .findById(id)
-    .populate("category", "name slug");
-
+    .populate("category", "name slug")
+    .populate("sellerId", "name");
   if (!product) {
     return next(new AppError("Product not found", 404));
   }
