@@ -13,7 +13,6 @@ import categoryRoutes from "./Modules/Category/category.routes.js";
 import userRoutes from "./Modules/User/user.routes.js";
 import adminRouter from "./Modules/Admin/admin.routes.js";
 import cookieParser from "cookie-parser";
-import "./Utils/Events/sendEmailEvent.js";
 import cors from "cors";
 import { AppError } from "./Utils/Error/AppError.js";
 
@@ -82,12 +81,10 @@ export const createApp = () => {
 
   // Root route
   app.get("/", (req, res) => {
-    res
-      .status(200)
-      .json({
-        status: "success",
-        message: "Express E-Commerce API is running",
-      });
+    res.status(200).json({
+      status: "success",
+      message: "Express E-Commerce API is running",
+    });
   });
 
   app.get("/health", async (req, res) => {
@@ -147,7 +144,6 @@ export const createApp = () => {
       },
     });
   });
-
 
   // Redirect trailing-slash variant (Express 5 treats them as distinct routes)
   //app.get("/api-docs/", (req, res) => res.redirect("/api-docs"));

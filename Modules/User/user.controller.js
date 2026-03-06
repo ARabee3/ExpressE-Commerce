@@ -4,7 +4,7 @@ import { AppError } from "../../Utils/Error/AppError.js";
 import { catchAsync } from "../../Utils/Error/catchAsync.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { sendMailEvent } from "../../Utils/Events/sendEmailEvent.js";
+import { sendEmail } from "../../Utils/Email/sendEmail.js";
 import { redisClient } from "../../Database/redisConnection.js";
 import { mergeGuestCart } from "../Cart/cart.controller.js";
 import { OAuth2Client } from "google-auth-library";
@@ -13,7 +13,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const register = catchAsync(async (req, res, next) => {
   const newUser = await userModel.create(req.body);
-  sendMailEvent.emit("register", newUser);
+  await sendEmail(newUser, "Verify your account.", "verify");
 
   const token = newUser.generateToken();
 
@@ -143,7 +143,7 @@ const resendVerification = catchAsync(async (req, res, next) => {
   if (existingOtp)
     return next(new AppError("Please wait before requesting a new OTP", 429));
 
-  sendMailEvent.emit("register", user);
+  await sendEmail(user, "Verify your account.", "verify");
 
   return res.status(200).json({
     success: true,
@@ -236,7 +236,7 @@ const forgotPassword = catchAsync(async (req, res, next) => {
     });
   }
 
-  sendMailEvent.emit("forgot-password", user);
+  await sendEmail(user, "Password Reset Code", "reset");
 
   return res.json({
     success: true,
