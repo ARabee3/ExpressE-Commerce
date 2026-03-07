@@ -10,7 +10,9 @@ import {
   getAllSellers,
   approveSeller,
   suspendSeller,
-  reactiveSeller
+  reactiveSeller,
+  getOrdersByUserId,
+  getAllUsers,
 } from "./admin.controller.js";
 import { Router } from "express";
 import { isAdmin } from "../../Middlewares/isAdmin.js";
@@ -33,10 +35,12 @@ const adminRouter = Router();
 adminRouter.use(verifyToken);
 
 adminRouter.get("/users/:id", isAdmin, getUserById);
+adminRouter.get("/users", isAdmin, getAllUsers);
 adminRouter.delete("/users/:id", isAdmin, deleteUser);
 adminRouter.put("/users/:id/role", isAdmin, updateUserRole);
 
 adminRouter.get("/orders", isAdmin, getAllOrders);
+adminRouter.get("/orders/user/:id", isAdmin, getOrdersByUserId);
 adminRouter.get("/orders/:id", isAdmin, getOrderById);
 adminRouter.put("/orders/:id/status", isAdmin, updateOrderStatus);
 adminRouter.delete("/orders/:id", isAdmin, deleteOrder);
