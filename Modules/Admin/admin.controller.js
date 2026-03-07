@@ -23,6 +23,29 @@ const getUserById = catchAsync(async (req, res, next) => {
   });
 });
 
+const getAllUsers = catchAsync(async (req, res, next) => {
+  const limit = parseInt(req.query.limit) || 10;
+  const page = parseInt(req.query.page) || 1;
+
+  const skip = limit * (page - 1);
+
+  const users = await userModel
+    .find()
+    .skip(skip)
+    .limit(limit)
+    .select("-password");
+
+  const totalUsers = await userModel.countDocuments();
+
+  res.status(200).json({
+    message: "users data",
+    data: users,
+    countOfUsers: totalUsers,
+    currentPage: page,
+    totalPages: Math.ceil(totalUsers / limit),
+  });
+});
+
 const deleteUser = catchAsync(async (req, res, next) => {
   const userId = req.params.id;
 
@@ -92,6 +115,32 @@ const updateUserRole = catchAsync(async (req, res, next) => {
 });
 
 // controll orders by admin
+
+const getOrdersByUserId = catchAsync(async (req, res, next) => {
+  const userId = req.params.id;
+   const limit = parseInt(req.query.limit) || 10;
+  const page = parseInt(req.query.page) || 1;
+  const skip = limit * (page - 1);
+  const filter = { userId: userId };
+
+  const orders = await orderModel
+    .find(filter)
+    .skip(skip)
+    .limit(limit)
+    .populate("userId", "name email phone")
+    .populate("orderItems.productId", "title price images");
+
+  const totalOrders = await orderModel.countDocuments(filter);
+
+  res.status(200).json({
+    message: "user orders history",
+    data: orders,
+    countOfOrders: totalOrders,
+    currentPage: page,
+    totalPages: Math.ceil(totalOrders / limit),
+  });
+});
+
 const getAllOrders = catchAsync(async (req, res, next) => {
   const limit = parseInt(req.query.limit) || 10;
   const page = parseInt(req.query.page) || 1;
@@ -354,5 +403,7 @@ export {
   getAllSellers,
   approveSeller,
   suspendSeller,
-  reactiveSeller
+  reactiveSeller,
+  getOrdersByUserId,
+  getAllUsers,
 };
