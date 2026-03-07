@@ -22,7 +22,11 @@ const getUserOrders = catchAsync(async (req, res, next) => {
   const [orders, totalOrders] = await Promise.all([
     orderModel
       .find(filter)
-      .populate("orderItems.productId", "title price images")
+      .populate({
+        path: "orderItems.productId",
+        select: "name price images sellerId",
+        populate: { path: "sellerId", select: "name storeName" },
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
@@ -40,9 +44,11 @@ const getUserOrders = catchAsync(async (req, res, next) => {
 
 const getOrderById = catchAsync(async (req, res, next) => {
   let orderId = req.params.id;
-  const order = await orderModel
-    .findOne({ _id: orderId })
-    .populate("orderItems.productId", "title price images");
+  const order = await orderModel.findOne({ _id: orderId }).populate({
+    path: "orderItems.productId",
+    select: "name price images sellerId",
+    populate: { path: "sellerId", select: "name storeName" },
+  });
 
   if (!order) {
     return next(new AppError("order not found", 404));

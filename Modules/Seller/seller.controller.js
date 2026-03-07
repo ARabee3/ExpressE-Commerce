@@ -12,7 +12,11 @@ const getMyProducts = catchAsync(async (req, res, next) => {
   const filter = { sellerId: seller_id };
 
   const [products, totalProducts] = await Promise.all([
-    productModel.find(filter).skip(skip).limit(limit),
+    productModel
+      .find(filter)
+      .populate("sellerId", "name storeName")
+      .skip(skip)
+      .limit(limit),
     productModel.countDocuments(filter),
   ]);
 
