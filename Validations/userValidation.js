@@ -40,13 +40,9 @@ export const userValidation = joi.object({
       "string.pattern.base":
         "Phone must contain only digits and + - ( ) spaces",
     }),
-  role: joi
-    .string()
-    .valid("Customer", "Seller")
-    .insensitive()
-    .messages({
-      "any.only": "Role must be one of (Customer, Seller)",
-    }),
+  role: joi.string().valid("Customer", "Seller").insensitive().messages({
+    "any.only": "Role must be one of (Customer, Seller)",
+  }),
   addresses: joi.array().items(
     joi.object({
       city: joi.string().trim().min(2).max(100).required().messages({
@@ -187,6 +183,10 @@ export const updateProfileValidation = joi.object({
       "string.pattern.base":
         "Phone must contain only digits and + - ( ) spaces",
     }),
+  storeName: joi.string().trim().min(2).max(100).optional().messages({
+    "string.min": "Store name must be at least 2 characters",
+    "string.max": "Store name must not exceed 100 characters",
+  }),
 });
 
 export const googleLoginValidation = joi.object({
