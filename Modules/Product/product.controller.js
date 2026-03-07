@@ -18,6 +18,8 @@ export const createProduct = catchAsync(async (req, res, next) => {
     images: imagePaths,
   });
 
+  await product.populate("sellerId", "name storeName");
+
   res.status(201).json({
     status: "success",
     data: product,
@@ -76,7 +78,7 @@ export const getProducts = catchAsync(async (req, res, next) => {
   const products = await productModel
     .find(filter)
     .populate("category")
-    .populate("sellerId", "name")
+    .populate("sellerId", "name storeName")
     .sort(sortOption)
     .skip(skip)
     .limit(limitNumber);
@@ -98,7 +100,7 @@ export const getProductById = catchAsync(async (req, res, next) => {
   const product = await productModel
     .findById(id)
     .populate("category", "name slug")
-    .populate("sellerId", "name");
+    .populate("sellerId", "name storeName");
   if (!product) {
     return next(new AppError("Product not found", 404));
   }
@@ -133,14 +135,12 @@ export const updateProduct = catchAsync(async (req, res, next) => {
   if (req.files && req.files.length > 0) {
     req.body.images = req.files.map((file) => file.path);
   }
-  const updatedProduct = await productModel.findByIdAndUpdate(
-    id,
-    filteredBody,
-    {
+  const updatedProduct = await productModel
+    .findByIdAndUpdate(id, filteredBody, {
       new: true,
       runValidators: true,
-    },
-  );
+    })
+    .populate("sellerId", "name storeName");
 
   if (!updatedProduct) {
     return next(new AppError("Product not found ", 404));
