@@ -12,6 +12,7 @@ import { categoryModel } from "./Database/Models/category.model.js";
 import categoryRoutes from "./Modules/Category/category.routes.js";
 import userRoutes from "./Modules/User/user.routes.js";
 import adminRouter from "./Modules/Admin/admin.routes.js";
+import chatbotRoutes from "./Modules/Chatbot/chatbot.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { AppError } from "./Utils/Error/AppError.js";
@@ -222,6 +223,7 @@ export const createApp = () => {
   app.use(orderRoutes);
   app.use("/admin", adminRouter);
   app.use(sellerRoutes);
+  app.use(chatbotRoutes);
 
   app.use((req, res, next) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
