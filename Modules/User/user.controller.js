@@ -67,7 +67,8 @@ const login = catchAsync(async (req, res, next) => {
 
 const verifyEmail = catchAsync(async (req, res, next) => {
   const { otp } = req.body;
-  const { email } = req.user;
+  const email = req.user?.email ?? req.body.email;
+  if (!email) return next(new AppError("Email is required", 400));
   if (!otp) return next(new AppError("OTP is required", 400));
 
   const storedOtp = await redisClient.get(`verify:${email}`);
@@ -76,8 +77,15 @@ const verifyEmail = catchAsync(async (req, res, next) => {
     return next(new AppError("Invalid or Expired OTP", 401));
   }
 
+  let userId = req.user?._id;
+  if (!userId) {
+    const user = await userModel.findOne({ email });
+    if (!user) return next(new AppError("User not found", 404));
+    userId = user._id;
+  }
+
   const updatedUser = await userModel.findByIdAndUpdate(
-    req.user._id,
+    userId,
     { isVerified: true },
     { new: true },
   );
