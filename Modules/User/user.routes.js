@@ -34,10 +34,15 @@ const userRoutes = express.Router();
 
 userRoutes.post("/register", authLimiter, validate(userValidation), register);
 userRoutes.post("/login", authLimiter, login);
-userRoutes.post("/google-login", authLimiter, validate(googleLoginValidation), googleLogin);
+userRoutes.post(
+  "/google-login",
+  authLimiter,
+  validate(googleLoginValidation),
+  googleLogin,
+);
 userRoutes.post("/logout", verifyToken, authLimiter, logout);
 userRoutes.post("/refresh", verifyToken, authLimiter, refresh);
-userRoutes.post("/verify-email", verifyToken, authLimiter, verifyEmail);
+userRoutes.post("/verify-email", authLimiter, verifyEmail);
 userRoutes.post("/resend-verification", authLimiter, resendVerification);
 
 userRoutes.patch(
@@ -80,4 +85,3 @@ userRoutes.patch("/wishlist/:productId", verifyToken, addToWishlist);
 userRoutes.delete("/wishlist/:productId", verifyToken, removeFromWishlist);
 
 export default userRoutes;
-
