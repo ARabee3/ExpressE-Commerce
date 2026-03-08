@@ -832,6 +832,25 @@ paths:
           description: Not an approved seller
 
   /products/{id}:
+    get:
+      tags: [Products]
+      summary: Get product by ID (public)
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Product details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/Product"
+        "404":
+          description: Product not found
     put:
       tags: [Products]
       summary: Update a product (Seller)
@@ -1232,6 +1251,59 @@ paths:
         "400":
           description: Order is not a Card payment or already paid
 
+  /orders/{id}/confirm-payment:
+    post:
+      tags: [Orders]
+      summary: Confirm Stripe payment (Card)
+      description: |
+        Verifies a Stripe PaymentIntent is `succeeded` and marks the order as paid.
+        The `paymentIntentId` must belong to this order.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paymentIntentId]
+              properties:
+                paymentIntentId:
+                  type: string
+                  description: The Stripe PaymentIntent ID returned by POST /orders/{id}/pay-intent
+                  example: pi_3OxxxxxxxxxxxxxxxxxX
+      responses:
+        "200":
+          description: Payment confirmed; order marked as paid and moved to Processing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      orderId:
+                        type: string
+                      isPaid:
+                        type: boolean
+                      status:
+                        type: string
+                      paidAt:
+                        type: string
+                        format: date-time
+        "400":
+          description: PaymentIntent not succeeded, mismatch, or order already paid
+        "404":
+          description: Order not found
+
   /orders/{id}/track:
     get:
       tags: [Orders]
@@ -1398,6 +1470,36 @@ paths:
         "200":
           description: Totals for users, orders, revenue, paid orders
 
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List all users (Admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Paginated user list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+                  currentPage:
+                    type: integer
+                  totalPages:
+                    type: integer
+                  totalUsers:
+                    type: integer
+
   /admin/users/{id}:
     get:
       tags: [Admin]
@@ -1479,6 +1581,39 @@ paths:
           description: Order deleted
         "400":
           description: Only cancelled orders can be deleted
+
+  /admin/orders/user/{id}:
+    get:
+      tags: [Admin]
+      summary: Get all orders for a specific user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Paginated orders for the specified user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Order"
+                  currentPage:
+                    type: integer
+                  totalPages:
+                    type: integer
+                  totalOrders:
+                    type: integer
+        "404":
+          description: User not found
 
   /admin/orders/{id}/status:
     put:
