@@ -13,6 +13,7 @@ A full-featured RESTful E-Commerce API built with **Express.js**, **MongoDB**, a
 - **Reviews** — Star ratings with automatic product average calculation
 - **Admin Panel** — Dashboard stats, user/order/coupon/seller management
 - **Seller System** — Register as seller, admin approval, product management
+- **AI Chatbot** — Intelligent assistant for product search and order tracking using Gemini API
 - **Security** — Helmet, CORS, rate limiting (Redis-backed), input validation (Joi), NoSQL injection protection, HTTPS enforcement
 - **Structured Logging** — Pino with pretty-print in dev, JSON in production
 - **Health Check** — `GET /health` with MongoDB + Redis status monitoring
@@ -87,6 +88,9 @@ GOOGLE_CLIENT_ID=<your-client-id>.apps.googleusercontent.com
 # Stripe (optional)
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Gemini API (Chatbot)
+GEMINI_API_KEY=your-gemini-api-key
 ```
 
 ### 4. Start the server
@@ -139,7 +143,8 @@ You can test all endpoints directly from the browser. Click **Authorize** 🔓 a
 │   ├── Review/                # Product reviews
 │   ├── Coupon/                # Coupon management
 │   ├── Admin/                 # Admin dashboard & management
-│   └── Seller/                # Seller registration & products
+│   ├── Seller/                # Seller registration & products
+│   └── Chatbot/               # AI shopping assistant
 ├── Validations/               # Joi schemas for each module
 ├── Utils/
 │   ├── Error/                 # AppError class & catchAsync
