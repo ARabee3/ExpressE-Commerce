@@ -13,6 +13,8 @@ import categoryRoutes from "./Modules/Category/category.routes.js";
 import userRoutes from "./Modules/User/user.routes.js";
 import adminRouter from "./Modules/Admin/admin.routes.js";
 import chatbotRoutes from "./Modules/Chatbot/chatbot.routes.js";
+import { checkHealth as checkGeminiHealth } from "./Modules/Chatbot/chatbot.service.js";
+import { conversationModel } from "./Database/Models/conversation.model.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { AppError } from "./Utils/Error/AppError.js";
@@ -131,8 +133,18 @@ export const createApp = () => {
       redisStatus = "disconnected";
     }
 
+    // Check Gemini API connectivity
+    let geminiHealth = { status: "disconnected", model: null, latencyMs: null };
+    try {
+      geminiHealth = await checkGeminiHealth();
+    } catch {
+      geminiHealth.status = "disconnected";
+    }
+
     const allHealthy =
-      mongoStatus === "connected" && redisStatus === "connected";
+      mongoStatus === "connected" &&
+      redisStatus === "connected" &&
+      geminiHealth.status === "connected";
 
     res.status(allHealthy ? 200 : 503).json({
       status: allHealthy ? "healthy" : "degraded",
@@ -142,6 +154,7 @@ export const createApp = () => {
         mongodb: mongoStatus,
         mongodbState: dbState, // Debug info: 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
         redis: redisStatus,
+        gemini: geminiHealth,
       },
     });
   });
@@ -214,6 +227,7 @@ export const createApp = () => {
   reviewModel;
   cartModel;
   couponModel;
+  conversationModel;
 
   app.use(userRoutes);
   app.use(categoryRoutes);
