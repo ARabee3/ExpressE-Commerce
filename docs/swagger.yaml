@@ -320,21 +320,12 @@ components:
       properties:
         message:
           type: string
+          maxLength: 2000
           example: "Find me some running shoes under $100"
-        history:
-          type: array
-          description: Optional chat history for context
-          items:
-            type: object
-            required: [role]
-            properties:
-              role:
-                type: string
-                enum: [user, assistant, model]
-              text:
-                type: string
-              content:
-                type: string
+        conversationId:
+          type: string
+          description: Optional — pass an existing conversation ID to continue the conversation. Omit to start a new one.
+          example: "665f1a2b3c4d5e6f7a8b9c0d"
 
     ChatResponse:
       type: object
@@ -342,17 +333,104 @@ components:
         status:
           type: string
           example: success
-        response:
+        data:
+          type: object
+          properties:
+            conversationId:
+              type: string
+              example: "665f1a2b3c4d5e6f7a8b9c0d"
+            response:
+              type: string
+              example: "I found several running shoes for you. Here are some options..."
+            tokenUsage:
+              type: object
+              properties:
+                promptTokens:
+                  type: integer
+                  example: 120
+                completionTokens:
+                  type: integer
+                  example: 85
+                total:
+                  type: integer
+                  example: 205
+
+    Conversation:
+      type: object
+      properties:
+        _id:
           type: string
-          example: "I found several running shoes for you. Here are some options..."
+          example: "665f1a2b3c4d5e6f7a8b9c0d"
+        userId:
+          type: string
+        title:
+          type: string
+          example: "Find me some running shoes under $100"
+        totalTokens:
+          type: integer
+          example: 1250
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ConversationDetail:
+      allOf:
+        - $ref: "#/components/schemas/Conversation"
+        - type: object
+          properties:
+            messages:
+              type: array
+              items:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  role:
+                    type: string
+                    enum: [user, model]
+                  content:
+                    type: string
+                  toolCalls:
+                    type: array
+                    items:
+                      type: string
+                  tokenCount:
+                    type: integer
+                  createdAt:
+                    type: string
+                    format: date-time
 
 paths:
+  # ── Root ───────────────────────────────────────────────
+  /:
+    get:
+      tags: [Auth]
+      summary: API status check
+      description: Returns a simple message confirming the API is running.
+      responses:
+        "200":
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Express E-Commerce API is running
+
   # ── Health Check ───────────────────────────────────────
   /health:
     get:
       tags: [Auth]
       summary: Health check
-      description: Returns the connectivity status of MongoDB and Redis. Returns 503 if any service is down.
+      description: Returns the connectivity status of MongoDB, Redis, and Gemini AI. Returns 503 if any service is down.
       responses:
         "200":
           description: All services healthy
@@ -379,15 +457,39 @@ paths:
                       redis:
                         type: string
                         example: connected
+                      gemini:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                            example: connected
+                          model:
+                            type: string
+                            example: gemini-2.5-flash
+                          latencyMs:
+                            type: integer
+                            example: 850
         "503":
           description: One or more services are down
 
   # ── Chatbot ──────────────────────────────────────────
-  /chat:
+  /chatbot/chat:
     post:
       tags: [Chatbot]
-      summary: Chat with the AI shopping assistant
-      description: Ask questions about products, search for items, or track your orders using natural language.
+      summary: Send a message to the AI shopping assistant
+      description: |
+        Chat with **ShopBot**, the AI-powered shopping assistant. It can:
+        - **Search products**: "Show me laptops under $500"
+        - **Get product details**: "Tell me more about product X"
+        - **Track orders**: "Where is my order 665f1a...?"
+        - **View order history**: "Show my recent orders"
+        - **Browse categories**: "What categories do you have?"
+
+        ### How to use
+        1. Send a `message` with **no** `conversationId` → starts a new conversation.
+        2. Use the returned `conversationId` in subsequent requests to continue the same conversation.
+
+        Rate limited to **20 messages per 15 minutes** per user.
       security:
         - bearerAuth: []
       requestBody:
@@ -396,17 +498,151 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ChatRequest"
+            examples:
+              newConversation:
+                summary: Start a new conversation
+                value:
+                  message: "Show me running shoes under $100"
+              continueConversation:
+                summary: Continue an existing conversation
+                value:
+                  message: "Do you have them in size 42?"
+                  conversationId: "665f1a2b3c4d5e6f7a8b9c0d"
+              trackOrder:
+                summary: Track an order
+                value:
+                  message: "What's the status of my order 665f1a2b3c4d5e6f7a8b9c0d?"
+              orderHistory:
+                summary: View order history
+                value:
+                  message: "Show me my recent orders"
+              browseCategories:
+                summary: Browse categories
+                value:
+                  message: "What product categories do you have?"
       responses:
         "200":
-          description: AI response
+          description: AI response with conversation ID
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChatResponse"
-        "400":
-          description: Message is missing
+        "422":
+          description: Validation error (empty message, exceeds 2000 chars, invalid conversationId)
         "401":
           description: Not authenticated
+        "404":
+          description: Conversation not found
+        "429":
+          description: Rate limit exceeded
+        "502":
+          description: Gemini API error
+        "504":
+          description: Gemini API timeout
+
+  /chatbot/conversations:
+    get:
+      tags: [Chatbot]
+      summary: List conversations
+      description: Returns a paginated list of the authenticated user's conversations (most recent first).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: Paginated conversation list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      conversations:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Conversation"
+                      total:
+                        type: integer
+                        example: 5
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 20
+        "401":
+          description: Not authenticated
+
+  /chatbot/conversations/{id}:
+    get:
+      tags: [Chatbot]
+      summary: Get a conversation
+      description: Returns a single conversation with all its messages.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Conversation with messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: "#/components/schemas/ConversationDetail"
+        "401":
+          description: Not authenticated
+        "404":
+          description: Conversation not found
+    delete:
+      tags: [Chatbot]
+      summary: Delete a conversation
+      description: Soft-deletes a conversation. It will no longer appear in listings.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Conversation deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Conversation deleted.
+        "401":
+          description: Not authenticated
+        "404":
+          description: Conversation not found
 
   # ── Auth ──────────────────────────────────────────────
   /register:
@@ -1604,6 +1840,35 @@ paths:
       responses:
         "200":
           description: Role updated
+
+  /admin/users/{id}/restore:
+    patch:
+      tags: [Admin]
+      summary: Restore a soft-deleted user
+      description: Re-activates a user that was previously soft-deleted by setting `isDeleted` back to `false`. Cannot restore Admin users.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: User restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: user restored successfuly
+                  data:
+                    $ref: "#/components/schemas/User"
+        "400":
+          description: User is not deleted
+        "403":
+          description: Cannot restore an Admin user
+        "404":
+          description: User not found
 
   /admin/orders:
     get:
