@@ -73,6 +73,33 @@ const deleteUser = catchAsync(async (req, res, next) => {
   });
 });
 
+const restoreUser = catchAsync(async (req, res, next) => {
+  const userId = req.params.id;
+
+  const user = await userModel.findById(userId);
+
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  if (!user.isDeleted) {
+    return next(new AppError("User already not deleted", 400));
+  }
+
+  if (user.role === "Admin") {
+    return next(new AppError("You can't delete admin user", 403));
+  }
+
+  const restoredUser = await userModel
+    .findByIdAndUpdate(userId, { isDeleted: false }, { new: true })
+    .select("-password");
+
+  res.status(200).json({
+    message: "user restored successfuly",
+    data: restoredUser,
+  });
+});
+
 const updateUserRole = catchAsync(async (req, res, next) => {
   const userId = req.params.id;
   const role = req.body.role;
@@ -416,4 +443,5 @@ export {
   reactiveSeller,
   getOrdersByUserId,
   getAllUsers,
+  restoreUser
 };
