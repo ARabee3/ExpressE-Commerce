@@ -73,6 +73,33 @@ const deleteUser = catchAsync(async (req, res, next) => {
   });
 });
 
+const restoreUser = catchAsync(async (req, res, next) => {
+  const userId = req.params.id;
+
+  const user = await userModel.findById(userId);
+
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  if (!user.isDeleted) {
+    return next(new AppError("User already not deleted", 400));
+  }
+
+  if (user.role === "Admin") {
+    return next(new AppError("You can't delete admin user", 403));
+  }
+
+  const restoredUser = await userModel
+    .findByIdAndUpdate(userId, { isDeleted: false }, { new: true })
+    .select("-password");
+
+  res.status(200).json({
+    message: "user restored successfuly",
+    data: restoredUser,
+  });
+});
+
 const updateUserRole = catchAsync(async (req, res, next) => {
   const userId = req.params.id;
   const role = req.body.role;
@@ -118,7 +145,7 @@ const updateUserRole = catchAsync(async (req, res, next) => {
 
 const getOrdersByUserId = catchAsync(async (req, res, next) => {
   const userId = req.params.id;
-   const limit = parseInt(req.query.limit) || 10;
+  const limit = parseInt(req.query.limit) || 10;
   const page = parseInt(req.query.page) || 1;
   const skip = limit * (page - 1);
   const filter = { userId: userId };
@@ -128,7 +155,11 @@ const getOrdersByUserId = catchAsync(async (req, res, next) => {
     .skip(skip)
     .limit(limit)
     .populate("userId", "name email phone")
-    .populate("orderItems.productId", "title price images");
+    .populate({
+      path: "orderItems.productId",
+      select: "name price images sellerId",
+      populate: { path: "sellerId", select: "name storeName" },
+    });
 
   const totalOrders = await orderModel.countDocuments(filter);
 
@@ -152,7 +183,11 @@ const getAllOrders = catchAsync(async (req, res, next) => {
     .skip(skip)
     .limit(limit)
     .populate("userId", "name email phone")
-    .populate("orderItems.productId", "title price images");
+    .populate({
+      path: "orderItems.productId",
+      select: "name price images sellerId",
+      populate: { path: "sellerId", select: "name storeName" },
+    });
 
   const totalOrders = await orderModel.countDocuments();
 
@@ -171,7 +206,11 @@ const getOrderById = catchAsync(async (req, res, next) => {
   const order = await orderModel
     .findById(orderId)
     .populate("userId", "name email phone")
-    .populate("orderItems.productId", "title price images");
+    .populate({
+      path: "orderItems.productId",
+      select: "name price images sellerId",
+      populate: { path: "sellerId", select: "name storeName" },
+    });
 
   if (!order) {
     return next(new AppError("Order not found", 404));
@@ -226,7 +265,11 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
   const updatedOrder = await orderModel
     .findByIdAndUpdate(orderId, updateData, { new: true })
     .populate("userId", "name email phone")
-    .populate("orderItems.productId", "title price images");
+    .populate({
+      path: "orderItems.productId",
+      select: "name price images sellerId",
+      populate: { path: "sellerId", select: "name storeName" },
+    });
 
   // restore stock if order is cancelled
   if (status === "Cancelled") {
@@ -301,96 +344,90 @@ const getDashboardStats = catchAsync(async (req, res, next) => {
   });
 });
 
-
 // seller data
-const getAllSellers = catchAsync(async(req,res,next)=>{
+const getAllSellers = catchAsync(async (req, res, next) => {
   const limit = parseInt(req.query.limit) || 10;
   const page = parseInt(req.query.page) || 1;
 
   const skip = limit * (page - 1);
-    const sellers = await userModel.find({ role: "Seller", isDeleted: false }).select("-password").limit(limit).skip(skip);
-    res.status(200).json({
-        message:"sellers data",
-        data:sellers
-    })
-})
+  const sellers = await userModel
+    .find({ role: "Seller", isDeleted: false })
+    .select("-password")
+    .limit(limit)
+    .skip(skip);
+  res.status(200).json({
+    message: "sellers data",
+    data: sellers,
+  });
+});
 
-const approveSeller = catchAsync(async(req,res,next)=>{
-    const sellerId = req.params.id;
-    const seller = await userModel.findById(sellerId);
+const approveSeller = catchAsync(async (req, res, next) => {
+  const sellerId = req.params.id;
+  const seller = await userModel.findById(sellerId);
 
-    if(!seller)
-    {
-        return next(new AppError("Seller not found",404));
-    }
-    if(seller.role !== "Seller")
-    {
-        return next(new AppError("User is not a seller",400));
-    }
-    if(seller.isApproved)
-    {
-        return next(new AppError("Seller is already approved",400));
-    }
+  if (!seller) {
+    return next(new AppError("Seller not found", 404));
+  }
+  if (seller.role !== "Seller") {
+    return next(new AppError("User is not a seller", 400));
+  }
+  if (seller.isApproved) {
+    return next(new AppError("Seller is already approved", 400));
+  }
 
-    seller.isApproved = true;
-    await seller.save();
+  seller.isApproved = true;
+  await seller.save();
 
-    res.status(200).json({
-        message:"Seller approved successfully",
-        data:seller
-    })
-})
+  res.status(200).json({
+    message: "Seller approved successfully",
+    data: seller,
+  });
+});
 
-const suspendSeller = catchAsync(async(req,res,next)=>{
-    const sellerId = req.params.id;
-    const seller = await userModel.findById(sellerId);
+const suspendSeller = catchAsync(async (req, res, next) => {
+  const sellerId = req.params.id;
+  const seller = await userModel.findById(sellerId);
 
-    if(!seller)
-    {
-        return next(new AppError("Seller not found",404));
-    }
-    if(seller.role !== "Seller")
-    {
-        return next(new AppError("User is not a seller",400));
-    }
-    if(!seller.isActive)
-    {
-        return next(new AppError("Seller is already suspended",400));
-    }
+  if (!seller) {
+    return next(new AppError("Seller not found", 404));
+  }
+  if (seller.role !== "Seller") {
+    return next(new AppError("User is not a seller", 400));
+  }
+  if (!seller.isActive) {
+    return next(new AppError("Seller is already suspended", 400));
+  }
 
-    seller.isActive = false;
-    await seller.save();
+  seller.isActive = false;
+  await seller.save();
 
-    res.status(200).json({
-        message:"Seller suspended successfully",
-        data:seller
-    })
-})
-const reactiveSeller = catchAsync(async(req,res,next)=>{
-    const sellerId = req.params.id;
-    const seller = await userModel.findById(sellerId);
+  res.status(200).json({
+    message: "Seller suspended successfully",
+    data: seller,
+  });
+});
+const reactiveSeller = catchAsync(async (req, res, next) => {
+  const sellerId = req.params.id;
+  const seller = await userModel.findById(sellerId);
 
-    if(!seller)
-    {
-        return next(new AppError("Seller not found",404));
-    }
-    if(seller.role !== "Seller")
-    {
-        return next(new AppError("User is not a seller",400));
-    }
-    if(seller.isActive)
-    {
-        return next(new AppError("Seller is already active",400));
-    }
+  if (!seller) {
+    return next(new AppError("Seller not found", 404));
+  }
+  if (seller.role !== "Seller") {
+    return next(new AppError("User is not a seller", 400));
+  }
+  if (seller.isActive) {
+    return next(new AppError("Seller is already active", 400));
+  }
 
-    seller.isActive = true;
-    await seller.save();
+  seller.isActive = true;
+  await seller.save();
 
-    res.status(200).json({
-        message:"Seller reactivated successfully",
-        data:seller
-    })
-})
+  res.status(200).json({
+    message: "Seller reactivated successfully",
+    data: seller,
+  });
+});
 export {
   getUserById,
   deleteUser,
@@ -406,4 +443,5 @@ export {
   reactiveSeller,
   getOrdersByUserId,
   getAllUsers,
+  restoreUser
 };
