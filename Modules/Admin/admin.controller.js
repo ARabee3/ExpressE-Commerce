@@ -240,6 +240,18 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
     );
   }
 
+  const isCash = order.paymentMethod === "Cash";
+
+  // Prevent setting cash orders back to "Pending"
+  if (isCash && status === "Pending") {
+    return next(
+      new AppError(
+        "Cash on Delivery orders cannot be set to Pending status",
+        400,
+      ),
+    );
+  }
+
   const updateData = { status };
 
   if (order.status === "Delivered" || order.status === "Cancelled") {
@@ -256,6 +268,12 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
 
   if (status === "Delivered") {
     updateData.deliveredAt = new Date();
+
+    // For cash orders, mark as paid on delivery
+    if (isCash && !order.isPaid) {
+      updateData.isPaid = true;
+      updateData.paidAt = new Date();
+    }
   }
 
   if (status === "Cancelled") {
@@ -276,6 +294,14 @@ const updateOrderStatus = catchAsync(async (req, res, next) => {
     for (const item of updatedOrder.orderItems) {
       await productModel.findByIdAndUpdate(item.productId, {
         $inc: { stock: item.quantity },
+      });
+    }
+
+    // Rollback coupon usage count if order had a coupon
+    if (order.couponId) {
+      const { couponModel } = await import("../../Database/Models/coupon.model.js");
+      await couponModel.findByIdAndUpdate(order.couponId, {
+        $inc: { usedCount: -1 },
       });
     }
   }

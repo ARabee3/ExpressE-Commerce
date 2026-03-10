@@ -4,6 +4,7 @@ import { dbConnection } from "./Database/dbConnection.js";
 import { redisConnection } from "./Database/redisConnection.js";
 import { initLimiters } from "./Middlewares/rateLimiter.js";
 import { createApp } from "./createApp.js";
+import { startCancelStaleOrdersCron } from "./Utils/cron/cancelStaleOrders.js";
 
 dbConnection();
 try {
@@ -19,4 +20,5 @@ const port = process.env.PORT || 3000;
 
 app.listen(port, () => {
   logger.info(`Server is running successfully at port ${port}`);
+  startCancelStaleOrdersCron();
 });
