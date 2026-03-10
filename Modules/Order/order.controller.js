@@ -362,6 +362,7 @@ const createPaymentIntent = catchAsync(async (req, res, next) => {
   const paymentIntent = await stripe.paymentIntents.create({
     amount,
     currency: "usd",
+    payment_method_types: ["card"],
     metadata: {
       orderId: order._id.toString(),
       userId: order.userId.toString(),
