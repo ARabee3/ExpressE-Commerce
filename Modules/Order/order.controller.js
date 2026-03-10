@@ -94,6 +94,35 @@ const addOrder = catchAsync(async (req, res, next) => {
     return next(new AppError("Cart not found", 404));
   }
 
+  // Prevent reusing a cart that already has an order
+  if (cart.isDeleted) {
+    return next(
+      new AppError(
+        "This cart already has a placed order. Please cancel the existing order or create a new cart.",
+        400,
+      ),
+    );
+  }
+
+  // For card payments, block if user already has a pending unpaid card order
+  if (paymentMethod === "Card") {
+    const existingPendingOrder = await orderModel.findOne({
+      userId,
+      status: "Pending",
+      paymentMethod: "Card",
+      isPaid: false,
+    });
+
+    if (existingPendingOrder) {
+      return next(
+        new AppError(
+          "You already have a pending card order. Please complete payment or cancel it before placing a new order.",
+          400,
+        ),
+      );
+    }
+  }
+
   // Filter active items only
   const activeItems = cart.items.filter((item) => !item.isDeleted);
   if (activeItems.length === 0) {
@@ -166,6 +195,9 @@ const addOrder = catchAsync(async (req, res, next) => {
     }
   }
 
+  // For cash orders, skip "Pending" and go straight to "Processing"
+  const isCash = paymentMethod === "Cash";
+
   // Create order
   const order = await orderModel.create({
     userId,
@@ -177,6 +209,8 @@ const addOrder = catchAsync(async (req, res, next) => {
     finalPrice,
     paymentMethod,
     couponId,
+    status: isCash ? "Processing" : "Pending",
+    processedAt: isCash ? new Date() : undefined,
   });
 
   // Atomically update stock — the filter ensures stock doesn't go negative
@@ -205,13 +239,20 @@ const addOrder = catchAsync(async (req, res, next) => {
     }
   }
 
-  // Soft delete the cart after successful order
-  cart.isDeleted = true;
-  await cart.save();
+  // For cash orders, hard-delete the cart (order is committed, no payment to wait for)
+  // For card orders, soft-delete the cart (can be restored if payment fails)
+  if (isCash) {
+    await cartModel.findByIdAndDelete(cartId);
+  } else {
+    cart.isDeleted = true;
+    await cart.save();
+  }
 
   res.status(201).json({
     status: "success",
-    message: "Order created successfully",
+    message: isCash
+      ? "Order placed successfully (Cash on Delivery). Your order is being processed."
+      : "Order created successfully. Please complete payment.",
     data: order,
   });
 });
@@ -231,9 +272,19 @@ const cancelOrder = catchAsync(async (req, res, next) => {
     return next(new AppError("Cannot cancel a paid order", 400));
   }
 
-  if (order.status !== "Pending") {
+  // For card orders: can only cancel if status is "Pending" (before payment)
+  // For cash orders: can cancel if status is "Pending" or "Processing" (before shipping)
+  const isCash = order.paymentMethod === "Cash";
+  const cancellableStatuses = isCash
+    ? ["Pending", "Processing"]
+    : ["Pending"];
+
+  if (!cancellableStatuses.includes(order.status)) {
     return next(
-      new AppError(`Cannot cancel order with status: ${order.status}`, 400),
+      new AppError(
+        `Cannot cancel order with status: ${order.status}. ${isCash ? "Cash orders can only be cancelled before shipping." : "Card orders can only be cancelled before payment."}`,
+        400,
+      ),
     );
   }
 
@@ -265,7 +316,9 @@ const cancelOrder = catchAsync(async (req, res, next) => {
     });
   }
 
-  if (order.cartId) {
+  // For card orders, restore the soft-deleted cart so user can retry
+  // For cash orders, cart was already hard-deleted, nothing to restore
+  if (!isCash && order.cartId) {
     await cartModel.findByIdAndUpdate(order.cartId, { isDeleted: false });
   }
 
@@ -286,6 +339,16 @@ const updatePaidStatus = catchAsync(async (req, res, next) => {
 
   if (order.isPaid) {
     return next(new AppError("Order is already paid", 400));
+  }
+
+  // Cash orders are paid on delivery — only admin can mark them as paid
+  if (order.paymentMethod === "Cash") {
+    return next(
+      new AppError(
+        "Cash on Delivery orders are marked as paid upon delivery by admin",
+        400,
+      ),
+    );
   }
 
   // update payment info
