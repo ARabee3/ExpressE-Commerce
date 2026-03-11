@@ -42,7 +42,25 @@ export const createApp = () => {
   // HTTPS enforcement (production only)
   app.use(enforceHttps);
 
-  app.use(cors());
+  const allowedOrigins = [
+    process.env.CLIENT_URL,
+    "http://localhost:5173",
+    "http://localhost:3000",
+  ].filter(Boolean);
+
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, curl)
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`CORS: origin ${origin} not allowed`));
+        }
+      },
+      credentials: true,
+    }),
+  );
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -61,7 +79,10 @@ export const createApp = () => {
           ],
           fontSrc: ["'self'", "https://fonts.gstatic.com"],
           imgSrc: ["'self'", "data:", "https:"],
-          connectSrc: ["'self'"],
+          connectSrc: [
+            "'self'",
+            ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+          ],
         },
       },
     }),
