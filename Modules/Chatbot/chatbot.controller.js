@@ -49,6 +49,45 @@ export const getConversation = catchAsync(async (req, res) => {
 });
 
 /**
+ * POST /chatbot/chat/stream
+ * Stream a chatbot response via Server-Sent Events (SSE).
+ *
+ * Events emitted:
+ *   meta  – { conversationId, context, suggestions }  (first)
+ *   delta – { text }                                   (N times)
+ *   done  – { tokenUsage }                             (last)
+ *   error – { message }                                (on failure)
+ */
+export const handleChatStream = catchAsync(async (req, res) => {
+  const { message, conversationId } = req.body;
+  const userId = req.user._id;
+
+  // SSE headers
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no", // disable Nginx buffering
+  });
+
+  try {
+    await chatbotService.streamMessage(
+      { userId, conversationId: conversationId || undefined, message },
+      res,
+    );
+  } catch (err) {
+    // If headers are already sent, push an error event instead of throwing
+    if (res.headersSent) {
+      const msg = err.message || "Streaming failed.";
+      res.write(`event: error\ndata: ${JSON.stringify({ message: msg })}\n\n`);
+      res.end();
+      return;
+    }
+    throw err; // let global error handler deal with it
+  }
+});
+
+/**
  * DELETE /chatbot/conversations/:id
  * Soft-delete a conversation.
  */

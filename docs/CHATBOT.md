@@ -36,11 +36,17 @@ The chatbot module provides an AI-powered shopping assistant called **ShopBot**.
 
 - Server-side conversation persistence (no client-side history tampering)
 - Sliding context window (last 20 messages) to control token usage
-- Structured `context` data returned alongside AI text (products, orders, categories with real `_id`s for frontend linking)
+- Structured `context` data returned alongside AI text (products, orders, categories, cart, reviews with real `_id`s for frontend linking)
+- Contextual follow-up `suggestions` (max 4) returned with every response
+- SSE streaming endpoint for real-time typewriter effect
+- Response sanitization via `sanitize-html` (strips scripts/dangerous tags)
+- Gemini safety settings (blocks harassment, hate speech, explicit content, dangerous content)
 - Dedicated rate limiter (20 msgs / 15 min per user)
 - 30-second timeout on Gemini calls
 - Max 5 tool-calling iterations per request
 - Token usage tracking per message and per conversation
+- Max 50 active conversations per user (oldest auto-archived when limit reached)
+- Auto-archiving of stale conversations (90 days of inactivity)
 
 ---
 
@@ -137,6 +143,7 @@ All endpoints require authentication (`Authorization: Bearer <token>`).
 | Method   | Endpoint                     | Description                           |  Rate Limited  |
 | -------- | ---------------------------- | ------------------------------------- | :------------: |
 | `POST`   | `/chatbot/chat`              | Send a message to ShopBot             | Yes (20/15min) |
+| `POST`   | `/chatbot/chat/stream`       | Stream a response via SSE             | Yes (20/15min) |
 | `GET`    | `/chatbot/conversations`     | List user's conversations (paginated) |       No       |
 | `GET`    | `/chatbot/conversations/:id` | Get a conversation with all messages  |       No       |
 | `DELETE` | `/chatbot/conversations/:id` | Soft-delete a conversation            |       No       |
@@ -185,6 +192,11 @@ All endpoints require authentication (`Authorization: Bearer <token>`).
         }
       ]
     },
+    "suggestions": [
+      "Tell me more about the first product",
+      "Show me cheaper options",
+      "What categories do you have?"
+    ],
     "tokenUsage": {
       "promptTokens": 250,
       "completionTokens": 120,
@@ -252,6 +264,101 @@ Returns full conversation with all messages. Each message includes:
 
 ---
 
+## SSE Streaming
+
+`POST /chatbot/chat/stream` returns a real-time stream of text chunks using **Server-Sent Events**.
+
+### Event Types
+
+| Event   | Data                                       | When           |
+| ------- | ------------------------------------------ | -------------- |
+| `meta`  | `{ conversationId, context, suggestions }` | First event    |
+| `delta` | `{ text }`                                 | For each chunk |
+| `done`  | `{ tokenUsage }`                           | Last event     |
+| `error` | `{ message }`                              | On failure     |
+
+### Client Example (JavaScript)
+
+```javascript
+const response = await fetch("/chatbot/chat/stream", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ message: "Show me laptops under $500" }),
+});
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+
+  const text = decoder.decode(value);
+  // Parse SSE events from text
+  for (const line of text.split("\n")) {
+    if (line.startsWith("data: ")) {
+      const data = JSON.parse(line.slice(6));
+      // Handle based on event type
+    }
+  }
+}
+```
+
+### Angular Example (using EventSource or fetch)
+
+```typescript
+this.http
+  .post(
+    "/chatbot/chat/stream",
+    { message },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: "text",
+      observe: "events",
+      reportProgress: true,
+    },
+  )
+  .subscribe((event) => {
+    // Handle SSE events
+  });
+```
+
+### How it works internally
+
+1. Tool calls are resolved **synchronously first** (non-streaming) since Gemini cannot stream while tool-calling.
+2. A `meta` event is sent with `conversationId`, `context` (structured data), and `suggestions`.
+3. The final text generation is streamed via `generateContentStream` — each chunk is sanitized and sent as a `delta` event.
+4. A `done` event is sent with token usage, and the connection closes.
+5. The conversation is persisted to MongoDB after the stream completes.
+
+---
+
+## Suggested Prompts
+
+Every response (both regular and streaming) includes a `suggestions` array with up to 4 contextual follow-up prompts.
+
+### How suggestions work
+
+Suggestions are generated based on **which tools were used** in the response:
+
+| Tools used                            | Example suggestions                                                                             |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `search_products`                     | "Tell me more about the first product", "Show me cheaper options"                               |
+| `get_product_details`                 | "What do other customers think of this product?", "Are there similar products?"                 |
+| `track_order` / `get_my_orders`       | "When will my order be delivered?", "Show me my other orders"                                   |
+| `get_categories`                      | "Show me products in the first category"                                                        |
+| `get_cart`                            | "What's my cart total?", "Remove the last item from my cart"                                    |
+| No tools (greeting, general question) | "Search for a product", "Show my recent orders", "What categories do you have?", "View my cart" |
+
+### Frontend usage
+
+Render the suggestions as clickable buttons/chips below the AI response. When clicked, send the suggestion text as the next message with the same `conversationId`.
+
+---
+
 ## Conversation Model (MongoDB)
 
 **Collection:** `conversations`
@@ -279,8 +386,10 @@ Returns full conversation with all messages. Each message includes:
 
 **Limits:**
 
+- Max 50 active conversations per user (oldest auto-archived when exceeded)
 - Max 100 messages per conversation (enforced by Mongoose validator)
 - Max 10,000 chars per individual message content
+- Conversations inactive for 90 days are auto-archived on next request
 - Title auto-generated from first user message (first 80 chars)
 
 **Indexes:**
@@ -327,6 +436,8 @@ These are declared in `chatbot.tools.js`. Gemini decides when to call them.
 | `track_order`         | Track a specific order (owner only)               | `orderId` (required)                              | Order with `status`, `orderItems`, `totalOrderPrice`, `finalPrice`, `paymentMethod`, timestamps |
 | `get_my_orders`       | Get user's 5 most recent orders                   | (none)                                            | Array of orders (same fields as track_order)                                                    |
 | `get_categories`      | List all categories                               | (none)                                            | Array of `{ name, slug }`                                                                       |
+| `get_cart`            | View the authenticated user's cart                | (none)                                            | Cart items with product details, quantities, prices, applied coupon                             |
+| `get_product_reviews` | Get latest 5 reviews for a product                | `productId` (required)                            | Array of reviews with `review`, `rating`, `user.name`, `createdAt`                              |
 
 ### Context Mapping
 
@@ -339,6 +450,8 @@ Tool results are forwarded to the client in the `context` object:
 | `track_order`         | `context.orders`     |
 | `get_my_orders`       | `context.orders`     |
 | `get_categories`      | `context.categories` |
+| `get_cart`            | `context.cart`       |
+| `get_product_reviews` | `context.reviews`    |
 
 If no tools are called (e.g., greeting or general question), `context` will be `{}`.
 
@@ -406,20 +519,22 @@ Defined in `Validations/chatbotValidation.js` using Joi:
 
 ## Safety & Security
 
-| Protection           | How                                                                                   |
-| -------------------- | ------------------------------------------------------------------------------------- |
-| **Auth required**    | All routes go through `verifyToken` middleware                                        |
-| **Rate limiting**    | 20 messages/15min per user (Redis-backed)                                             |
-| **Input validation** | Joi schema: 2000 char max, ObjectId format check                                      |
-| **ReDoS prevention** | All user-supplied keywords are escaped before `$regex` via `escapeRegex()`            |
-| **NoSQL injection**  | Global `sanitizeNoSQL` middleware + controlled query building                         |
-| **PII protection**   | Order queries use `.select()` to exclude addresses/payment data                       |
-| **User isolation**   | Orders/conversations always filtered by `userId` — users cannot see each other's data |
-| **Prompt injection** | System prompt instructs model to reject role-change attempts                          |
-| **Tool loop cap**    | Max 5 iterations prevents infinite loops / runaway costs                              |
-| **Timeout**          | 30-second AbortController timeout on all Gemini calls                                 |
-| **Token tracking**   | Every message logs token count; total tracked per conversation                        |
-| **Soft delete**      | Conversations are soft-deleted (set `isActive: false`), not actually removed          |
+| Protection              | How                                                                                             |
+| ----------------------- | ----------------------------------------------------------------------------------------------- |
+| **Auth required**       | All routes go through `verifyToken` middleware                                                  |
+| **Rate limiting**       | 20 messages/15min per user (Redis-backed)                                                       |
+| **Input validation**    | Joi schema: 2000 char max, ObjectId format check                                                |
+| **Output sanitization** | All AI responses passed through `sanitize-html` — strips `<script>`, `<iframe>`, event handlers |
+| **Safety settings**     | Gemini blocks MEDIUM and above for harassment, hate speech, explicit content, dangerous content |
+| **ReDoS prevention**    | All user-supplied keywords are escaped before `$regex` via `escapeRegex()`                      |
+| **NoSQL injection**     | Global `sanitizeNoSQL` middleware + controlled query building                                   |
+| **PII protection**      | Order queries use `.select()` to exclude addresses/payment data                                 |
+| **User isolation**      | Orders/conversations always filtered by `userId` — users cannot see each other's data           |
+| **Prompt injection**    | System prompt instructs model to reject role-change attempts                                    |
+| **Tool loop cap**       | Max 5 iterations prevents infinite loops / runaway costs                                        |
+| **Timeout**             | 30-second AbortController timeout on all Gemini calls                                           |
+| **Token tracking**      | Every message logs token count; total tracked per conversation                                  |
+| **Soft delete**         | Conversations are soft-deleted (set `isActive: false`), not actually removed                    |
 
 ---
 
@@ -534,10 +649,22 @@ That's it. No changes to the controller, service, or routes needed. Gemini will 
 
 6. **Adding console.logs** — Don't use `console.log` in production code. Use the `logger` from `Utils/logger.js` (it's pino).
 
-7. **Testing the chatbot** — Use Swagger UI at `/api-docs` → Chatbot section. There are 5 example payloads to try.
+7. **Testing the chatbot** — Use Swagger UI at `/api-docs` → Chatbot section. There are 7 example payloads to try (including cart and reviews).
 
 8. **Cost awareness** — Each message can trigger 1–6 Gemini API calls (initial + up to 5 tool loops). Token usage is tracked per message and logged. Monitor via `conversation.totalTokens`.
 
 9. **100 message limit** — When a conversation hits 100 messages, the Mongoose validator rejects new saves. The user must start a new conversation.
 
-10. **Soft delete** — `DELETE /chatbot/conversations/:id` sets `isActive: false`. The data remains in MongoDB. Don't use `deleteOne/deleteMany` on conversations.
+10. **50 conversation limit** — Each user can have at most 50 active conversations. When creating a new conversation at the limit, the oldest one is auto-archived (soft-deleted). Conversations inactive for 90+ days are also auto-archived opportunistically.
+
+11. **Soft delete** — `DELETE /chatbot/conversations/:id` sets `isActive: false`. The data remains in MongoDB. Don't use `deleteOne/deleteMany` on conversations.
+
+12. **Soft delete** — `DELETE /chatbot/conversations/:id` sets `isActive: false`. The data remains in MongoDB. Don't use `deleteOne/deleteMany` on conversations.
+
+13. **Response sanitization** — All AI text is passed through `sanitize-html` before being returned. Only safe markdown-compatible tags are allowed (`b`, `i`, `em`, `strong`, `ul`, `ol`, `li`, `p`, `br`, `code`, `pre`). Scripts and event handlers are stripped.
+
+14. **Safety settings** — Gemini is configured to block `MEDIUM_AND_ABOVE` for all 4 harm categories (harassment, hate speech, sexually explicit, dangerous content). This is enforced on every API call.
+
+15. **SSE streaming and tool calls** — The streaming endpoint resolves all tool calls synchronously first, then streams only the final text response. This is because Gemini cannot stream and tool-call simultaneously.
+
+16. **Suggestions change per response** — The `suggestions` array is generated dynamically based on which tools were used. Don't cache suggestions across messages.
