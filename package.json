@@ -10,7 +10,9 @@
     "start": "node app.js",
     "dev": "nodemon app.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "seed": "node Database/seed.js",
+    "seed:fresh": "node Database/seed.js --fresh"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +21,7 @@
   "dependencies": {
     "@google/genai": "^1.44.0",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.9.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.2.4",
