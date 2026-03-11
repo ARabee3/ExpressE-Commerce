@@ -1,6 +1,9 @@
 # 🛒 Express E-Commerce API
 
-A full-featured RESTful E-Commerce API built with **Express.js**, **MongoDB**, and **Redis**.
+A full-featured RESTful E-Commerce API built with **Express.js**, **MongoDB**, and **Redis**, powering the [ExpressoCart](https://expresso-cart.vercel.app) storefront.
+
+**Frontend:** https://expresso-cart.vercel.app  
+**API Docs:** `/api-docs` (Swagger UI)
 
 ## ✨ Features
 
@@ -21,20 +24,22 @@ A full-featured RESTful E-Commerce API built with **Express.js**, **MongoDB**, a
 
 ## 🏗️ Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Runtime | Node.js (ES Modules) |
-| Framework | Express 5 |
-| Database | MongoDB (Mongoose) |
-| Cache / Rate Limit | Redis (Upstash compatible) |
-| Auth | JWT + bcrypt + Google OAuth |
-| Payments | Stripe |
-| Email | Nodemailer (Gmail) |
-| Validation | Joi |
-| Security | Helmet, CORS, Custom NoSQL Injection Protection |
-| Logging | Pino |
-| Testing | Vitest + Supertest |
-| Docs | Swagger UI (OpenAPI 3.0) |
+| Layer              | Technology                                                                             |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| Runtime            | Node.js (ES Modules)                                                                   |
+| Framework          | Express 5                                                                              |
+| Database           | MongoDB (Mongoose)                                                                     |
+| Cache / Rate Limit | Redis (Upstash compatible)                                                             |
+| Auth               | JWT + bcrypt + Google OAuth                                                            |
+| Payments           | Stripe                                                                                 |
+| Email              | Nodemailer (Gmail)                                                                     |
+| Validation         | Joi                                                                                    |
+| AI / Chatbot       | Google Gemini (`gemini-2.5-flash`) via function calling                                |
+| File Storage       | Cloudinary                                                                             |
+| Security           | Helmet, CORS (`withCredentials` + origin allowlist), Custom NoSQL Injection Protection |
+| Logging            | Pino                                                                                   |
+| Testing            | Vitest + Supertest                                                                     |
+| Docs               | Swagger UI (OpenAPI 3.0)                                                               |
 
 ## 📋 Prerequisites
 
@@ -43,6 +48,7 @@ A full-featured RESTful E-Commerce API built with **Express.js**, **MongoDB**, a
 - **Redis** (Upstash, local, or Docker)
 - **Stripe account** (for payments — optional)
 - **Google Cloud OAuth Client ID** (for Google login — optional)
+- **Google Gemini API Key** (for the AI chatbot — optional, get one at [aistudio.google.com](https://aistudio.google.com))
 
 ## 🚀 Getting Started
 
@@ -68,6 +74,9 @@ ENVIRONMENT=development
 PORT=3000
 BASE_URL=http://localhost:3000
 
+# Frontend URL — used for CORS origin allowlist
+CLIENT_URL=https://expresso-cart.vercel.app
+
 # Database
 MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/<dbname>
 
@@ -89,8 +98,14 @@ GOOGLE_CLIENT_ID=<your-client-id>.apps.googleusercontent.com
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
+# Cloudinary (product image uploads)
+CLOUDINARY_CLOUD_NAME=<your-cloud-name>
+CLOUDINARY_API_KEY=<your-api-key>
+CLOUDINARY_API_SECRET=<your-api-secret>
+
 # Gemini API (Chatbot)
-GEMINI_API_KEY=your-gemini-api-key
+GEMINI_API_KEY=<your-gemini-api-key>
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
 ### 4. Start the server
@@ -150,6 +165,8 @@ You can test all endpoints directly from the browser. Click **Authorize** 🔓 a
 │   ├── Error/                 # AppError class & catchAsync
 │   ├── Email/                 # Email templates & sender
 │   ├── Events/                # EventEmitter for async emails
+│   ├── cron/                  # Scheduled jobs (e.g. stale order cancellation)
+│   ├── cloudinary.js          # Cloudinary upload helper
 │   ├── logger.js              # Pino logger configuration
 │   └── hashPassword.js        # bcrypt pre-save hook
 ├── tests/
@@ -169,15 +186,66 @@ You can test all endpoints directly from the browser. Click **Authorize** 🔓 a
 
 ```
 Email/Password:
-  Register → Receive OTP email → Verify Email → Login → Get Access Token
+  Register → Receive OTP email → Verify Email → Login
+                                                  ↓
+                              Access Token (body) + Refresh Token (httpOnly cookie)
+                                                  ↓
+                              Use access token in Authorization: Bearer <token>
+                                                  ↓
+                              Token expires (30min) → POST /refresh (withCredentials)
+                                                  ↓
+                              New access token returned
 
 Google OAuth:
-  Google Sign-In → POST /google-login { idToken } → Get Access Token
-                                                        ↓
-                                              Use token in Authorization header
-                                                        ↓
-                                              Token expires (30min) → POST /refresh
+  Google Sign-In on frontend → POST /google-login { idToken }
+                                                  ↓
+                              Access Token (body) + Refresh Token (httpOnly cookie)
 ```
+
+> The refresh token is stored in an `httpOnly`, `secure`, `sameSite=None` cookie so it works across the cross-origin frontend (`expresso-cart.vercel.app`) ↔ backend boundary. The frontend must send requests with `withCredentials: true`.
+
+## 🤖 AI Chatbot
+
+The chatbot is powered by **Google Gemini** (`gemini-2.5-flash`) with **function calling** — it queries the live database on the user's behalf instead of hallucinating data.
+
+### Endpoints
+
+| Method   | Path                         | Description                            |
+| -------- | ---------------------------- | -------------------------------------- |
+| `POST`   | `/chatbot/chat`              | Send a message, get a full response    |
+| `POST`   | `/chatbot/chat/stream`       | Send a message, stream response as SSE |
+| `GET`    | `/chatbot/conversations`     | List user's conversation history       |
+| `GET`    | `/chatbot/conversations/:id` | Retrieve a specific conversation       |
+| `DELETE` | `/chatbot/conversations/:id` | Delete a conversation                  |
+
+All chatbot routes require authentication (`Authorization: Bearer <token>`).
+
+### Function-Calling Tools
+
+The model has access to these live-database tools:
+
+| Tool                  | Description                              |
+| --------------------- | ---------------------------------------- |
+| `search_products`     | Search by keyword, category, price range |
+| `get_product_details` | Full details for a product by ID         |
+| `get_categories`      | List all product categories              |
+| `get_product_reviews` | Reviews for a specific product           |
+| `get_my_orders`       | The authenticated user's order list      |
+| `track_order`         | Status + details of a specific order     |
+| `get_cart`            | The authenticated user's current cart    |
+
+### Conversation Management
+
+- Conversations are persisted to MongoDB per user.
+- A **sliding context window** of 20 messages is sent to Gemini on every turn.
+- Up to **50 conversations** per user; stale ones (90 days inactive) are auto-archived.
+- The model iterates through up to **5 tool call rounds** per message before responding.
+
+### Safety & Rate Limiting
+
+- Gemini safety filters are applied at `BLOCK_MEDIUM_AND_ABOVE` for harassment, hate speech, sexual content, and dangerous content.
+- The chatbot endpoint has its own **dedicated rate limiter** (stricter than the global one).
+- AI responses are HTML-sanitized before being returned to the client.
 
 ## 🛒 Shopping Flow
 
@@ -191,26 +259,26 @@ Track Order → Receive status emails
 
 ## 👥 Roles & Permissions
 
-| Action | Customer | Seller | Admin |
-|---|:---:|:---:|:---:|
-| Browse products | ✅ | ✅ | ✅ |
-| Manage cart & orders | ✅ | ✅ | ✅ |
-| Write reviews | ✅ | ✅ | ✅ |
-| Create products | ❌ | ✅ | ❌ |
-| Manage categories | ❌ | ❌ | ✅ |
-| Manage all orders | ❌ | ❌ | ✅ |
-| Manage users | ❌ | ❌ | ✅ |
-| Manage coupons | ❌ | ❌ | ✅ |
-| Approve sellers | ❌ | ❌ | ✅ |
+| Action               | Customer | Seller | Admin |
+| -------------------- | :------: | :----: | :---: |
+| Browse products      |    ✅    |   ✅   |  ✅   |
+| Manage cart & orders |    ✅    |   ✅   |  ✅   |
+| Write reviews        |    ✅    |   ✅   |  ✅   |
+| Create products      |    ❌    |   ✅   |  ❌   |
+| Manage categories    |    ❌    |   ❌   |  ✅   |
+| Manage all orders    |    ❌    |   ❌   |  ✅   |
+| Manage users         |    ❌    |   ❌   |  ✅   |
+| Manage coupons       |    ❌    |   ❌   |  ✅   |
+| Approve sellers      |    ❌    |   ❌   |  ✅   |
 
 ## 📜 Scripts
 
-| Script | Command | Description |
-|---|---|---|
-| dev | `npm run dev` | Start with nodemon (auto-restart) |
-| start | `npm start` | Start for production |
-| test | `npm test` | Run all 36 tests |
-| test:watch | `npm run test:watch` | Run tests in watch mode |
+| Script     | Command              | Description                       |
+| ---------- | -------------------- | --------------------------------- |
+| dev        | `npm run dev`        | Start with nodemon (auto-restart) |
+| start      | `npm start`          | Start for production              |
+| test       | `npm test`           | Run all 36 tests                  |
+| test:watch | `npm run test:watch` | Run tests in watch mode           |
 
 ## 🧪 Testing
 
@@ -220,13 +288,13 @@ The project includes **36 integration tests** across 5 test suites:
 npm test
 ```
 
-| Suite | Tests | Covers |
-|---|:---:|---|
-| `health.test.js` | 1 | Health check endpoint |
-| `auth.test.js` | 13 | Register, login, OTP verify, profile, password |
-| `product.test.js` | 8 | Create, list, filter, update, delete |
-| `cart.test.js` | 7 | Add, get, update, remove, guest, stock |
-| `order.test.js` | 7 | Place, list, get, track, cancel, stock rollback |
+| Suite             | Tests | Covers                                          |
+| ----------------- | :---: | ----------------------------------------------- |
+| `health.test.js`  |   1   | Health check endpoint                           |
+| `auth.test.js`    |  13   | Register, login, OTP verify, profile, password  |
+| `product.test.js` |   8   | Create, list, filter, update, delete            |
+| `cart.test.js`    |   7   | Add, get, update, remove, guest, stock          |
+| `order.test.js`   |   7   | Place, list, get, track, cancel, stock rollback |
 
 Tests use a separate `_test` database that is automatically dropped after the suite completes.
 
