@@ -30,7 +30,7 @@
 
 ## Overview
 
-The chatbot module provides an AI-powered shopping assistant called **ShopBot**. It uses Google's Gemini API with **function calling** — the AI can query our actual database (products, orders, categories) in real-time and return results to the user.
+The chatbot module provides an AI-powered shopping assistant called **ShopBot**. It uses Google's Gemini API with **function calling** — the AI can query our actual database (products, orders, categories, cart) in real-time and return results to the user.
 
 **Key features:**
 
