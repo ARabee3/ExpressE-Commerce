@@ -25,6 +25,7 @@ export const getStatusInfo = (status) => {
       title: "Order Shipped",
       message:
         "Excellent news! Your order has been shipped and is on its way to you.",
+      action: "Your order has been shipped "
     },
     Delivered: {
       subject: "Order Delivered",
