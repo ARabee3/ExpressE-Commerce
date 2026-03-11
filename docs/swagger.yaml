@@ -342,6 +342,39 @@ components:
             response:
               type: string
               example: "I found several running shoes for you. Here are some options..."
+            context:
+              type: object
+              description: Structured data returned by tool calls (products, orders, categories, cart, reviews). Use this to render clickable UI elements.
+              properties:
+                products:
+                  type: array
+                  items:
+                    type: object
+                orders:
+                  type: array
+                  items:
+                    type: object
+                categories:
+                  type: array
+                  items:
+                    type: object
+                cart:
+                  type: array
+                  items:
+                    type: object
+                reviews:
+                  type: array
+                  items:
+                    type: object
+            suggestions:
+              type: array
+              description: Contextual follow-up prompt suggestions (max 4).
+              items:
+                type: string
+              example:
+                - "Tell me more about the first product"
+                - "Show me cheaper options"
+                - "What categories do you have?"
             tokenUsage:
               type: object
               properties:
@@ -484,10 +517,14 @@ paths:
         - **Track orders**: "Where is my order 665f1a...?"
         - **View order history**: "Show my recent orders"
         - **Browse categories**: "What categories do you have?"
+        - **View cart**: "What's in my cart?"
+        - **Read reviews**: "What do people think of product X?"
 
         ### How to use
         1. Send a `message` with **no** `conversationId` → starts a new conversation.
         2. Use the returned `conversationId` in subsequent requests to continue the same conversation.
+        3. Use the `suggestions` array to display follow-up prompt buttons in the UI.
+        4. Use the `context` object to render structured data (product cards, order tracking, etc.).
 
         Rate limited to **20 messages per 15 minutes** per user.
       security:
@@ -520,6 +557,14 @@ paths:
                 summary: Browse categories
                 value:
                   message: "What product categories do you have?"
+              viewCart:
+                summary: View my cart
+                value:
+                  message: "What's in my shopping cart?"
+              productReviews:
+                summary: Read product reviews
+                value:
+                  message: "Show me reviews for product 665f1a2b3c4d5e6f7a8b9c0d"
       responses:
         "200":
           description: AI response with conversation ID
@@ -539,6 +584,56 @@ paths:
           description: Gemini API error
         "504":
           description: Gemini API timeout
+
+  /chatbot/chat/stream:
+    post:
+      tags: [Chatbot]
+      summary: Stream a response via Server-Sent Events (SSE)
+      description: |
+        Same as `/chatbot/chat` but returns a real-time stream of text chunks using **Server-Sent Events**.
+
+        ### SSE Events
+        | Event  | Data                                          | When            |
+        |--------|-----------------------------------------------|------------------|
+        | `meta`  | `{ conversationId, context, suggestions }`   | First event      |
+        | `delta` | `{ text }`                                   | For each chunk   |
+        | `done`  | `{ tokenUsage }`                             | Last event       |
+        | `error` | `{ message }`                                | On failure       |
+
+        ### Client Example (JavaScript)
+        ```js
+        const evtSource = new EventSource('/chatbot/chat/stream', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer <token>' },
+          body: JSON.stringify({ message: 'Hello' })
+        });
+        evtSource.addEventListener('delta', (e) => {
+          const { text } = JSON.parse(e.data);
+          // append text to chat UI
+        });
+        ```
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: SSE stream of text chunks
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: "event: delta\ndata: {\"text\":\"Hello! How can I help?\"}\n\n"
+        "401":
+          description: Not authenticated
+        "422":
+          description: Validation error
+        "429":
+          description: Rate limit exceeded
 
   /chatbot/conversations:
     get:

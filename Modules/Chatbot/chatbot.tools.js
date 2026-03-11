@@ -1,6 +1,8 @@
 import { productModel } from "../../Database/Models/product.model.js";
 import { orderModel } from "../../Database/Models/order.model.js";
 import { categoryModel } from "../../Database/Models/category.model.js";
+import { cartModel } from "../../Database/Models/cart.model.js";
+import { reviewModel } from "../../Database/Models/review.model.js";
 import logger from "../../Utils/logger.js";
 
 /**
@@ -81,6 +83,30 @@ export const toolDeclarations = [
         parameters: {
           type: "OBJECT",
           properties: {},
+        },
+      },
+      {
+        name: "get_cart",
+        description:
+          "Get the current shopping cart for the authenticated user, including items, quantities, prices, and any applied coupon.",
+        parameters: {
+          type: "OBJECT",
+          properties: {},
+        },
+      },
+      {
+        name: "get_product_reviews",
+        description:
+          "Get the most recent reviews (up to 5) for a specific product by its ID.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            productId: {
+              type: "STRING",
+              description: "The MongoDB ObjectId of the product.",
+            },
+          },
+          required: ["productId"],
         },
       },
     ],
@@ -168,6 +194,52 @@ const handlers = {
   async get_categories() {
     return categoryModel.find().select("name slug").lean();
   },
+
+  async get_cart(_args, userId) {
+    const cart = await cartModel
+      .findOne({ userId, isDeleted: false })
+      .select("items totalPrice discountAmount finalPrice appliedCoupon")
+      .populate({
+        path: "items.productId",
+        select: "name price images stock",
+      })
+      .populate("appliedCoupon", "code discount")
+      .lean();
+
+    if (!cart || cart.items.length === 0)
+      return { message: "Your cart is empty." };
+
+    return {
+      items: cart.items
+        .filter((i) => !i.isDeleted)
+        .map((i) => ({
+          product: i.productId,
+          quantity: i.quantity,
+        })),
+      totalPrice: cart.totalPrice,
+      discountAmount: cart.discountAmount,
+      finalPrice: cart.finalPrice,
+      coupon: cart.appliedCoupon || null,
+    };
+  },
+
+  async get_product_reviews(args) {
+    try {
+      const reviews = await reviewModel
+        .find({ product: args.productId })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select("review rating user createdAt")
+        .populate("user", "name")
+        .lean();
+
+      if (!reviews.length)
+        return { message: "No reviews found for this product." };
+      return reviews;
+    } catch {
+      return { error: "Invalid product ID format." };
+    }
+  },
 };
 
 // ─── Dispatcher ─────────────────────────────────────────────────────────────
@@ -182,6 +254,8 @@ const CONTEXT_TOOLS = {
   track_order: "orders",
   get_my_orders: "orders",
   get_categories: "categories",
+  get_cart: "cart",
+  get_product_reviews: "reviews",
 };
 
 /**

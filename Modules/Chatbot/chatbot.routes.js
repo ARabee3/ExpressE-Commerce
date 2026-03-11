@@ -1,6 +1,7 @@
 import express from "express";
 import {
   handleChat,
+  handleChatStream,
   getConversations,
   getConversation,
   deleteConversation,
@@ -25,6 +26,14 @@ chatbotRoutes.post(
   chatbotLimiter,
   validate(sendMessageValidation),
   handleChat,
+);
+
+// Stream a response via SSE (same validation & rate limiter)
+chatbotRoutes.post(
+  "/chatbot/chat/stream",
+  chatbotLimiter,
+  validate(sendMessageValidation),
+  handleChatStream,
 );
 
 // Conversation management
