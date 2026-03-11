@@ -3,19 +3,26 @@ import { categoryModel } from "../../Database/Models/category.model.js";
 import { catchAsync } from "../../Utils/Error/catchAsync.js";
 import slugify from "slugify";
 import { AppError } from "../../Utils/Error/AppError.js";
+import { uploadToCloudinary } from "../../Utils/cloudinary.js";
+
 //create product
 export const createProduct = catchAsync(async (req, res, next) => {
   req.body.sellerId = req.user._id;
+
   // Make sure images uploaded
   if (!req.files || req.files.length === 0) {
     return next(new AppError("Product must have at least one image", 400));
   }
-  // Convert files to array of paths
-  const imagePaths = req.files.map((file) => file.path);
+
+  // Upload every buffer to Cloudinary in parallel
+  const uploads = await Promise.all(
+    req.files.map((file) => uploadToCloudinary(file.buffer)),
+  );
+  const imageUrls = uploads.map((u) => u.url);
 
   const product = await productModel.create({
     ...req.body,
-    images: imagePaths,
+    images: imageUrls,
   });
 
   await product.populate("sellerId", "name storeName");
@@ -133,7 +140,10 @@ export const updateProduct = catchAsync(async (req, res, next) => {
     req.body.slug = slugify(req.body.name, { lower: true });
   }
   if (req.files && req.files.length > 0) {
-    req.body.images = req.files.map((file) => file.path);
+    const uploads = await Promise.all(
+      req.files.map((file) => uploadToCloudinary(file.buffer)),
+    );
+    filteredBody.images = uploads.map((u) => u.url);
   }
   const updatedProduct = await productModel
     .findByIdAndUpdate(id, filteredBody, {

@@ -22,9 +22,6 @@ const getMyProducts = catchAsync(async (req, res, next) => {
     productModel.countDocuments(filter),
   ]);
 
-  if (!products || products.length === 0) {
-    return next(new AppError("No products found for this seller", 404));
-  }
   res.status(200).json({
     message: "Products of this seller",
     data: products,
