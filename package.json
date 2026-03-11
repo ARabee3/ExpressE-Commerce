@@ -10,7 +10,9 @@
     "start": "node app.js",
     "dev": "nodemon app.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "seed": "node Database/seed.js",
+    "seed:fresh": "node Database/seed.js --fresh"
   },
   "keywords": [],
   "author": "",
