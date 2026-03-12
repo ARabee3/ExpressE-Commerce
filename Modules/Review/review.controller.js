@@ -11,10 +11,10 @@ export const createReview = catchAsync(async (req, res, next) => {
   if (!product) {
     return next(new AppError("Product not found", 404));
   }
-  //check if the user buy this product
+  // check if the user buy this product (I missed this sorry)
   const hasBought = await orderModel.findOne({
-    user: req.user._id,
-    "orderItems.product": req.body.product,
+    userId: req.user._id,
+    "orderItems.productId": req.body.product,
   });
   if (!hasBought) {
     return next(
